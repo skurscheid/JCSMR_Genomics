@@ -104,6 +104,7 @@ ens.mmus.cvgoa.attribs.homology.go.rna_bind <- ens.mmus.cvgoa.attribs.homology.g
 WCL <- read.xls("/Users/skurscheid/Dropbox/REM project-Sebastian/HL-1 interactome superset.xlsx", sheet = 7)
 length(intersect(ens.mmus.cvgoa.attribs.homology$ensembl_gene_id, WCL$WCL.ENSEMBL.gene.ID))
 ens.mmus.cvgoa.wcl <- intersect(ens.mmus.cvgoa.attribs.homology$ensembl_gene_id, WCL$WCL.ENSEMBL.gene.ID)
+length(intersect(unique(ens.mmus.ids.cvgoa), WCL$WCL.ENSEMBL.gene.ID))
 
 # write it to TXT file 
 writeLines(intersect(interactome$ENSEMBL.1145, ens.mmus.cvgoa.attribs.homology$ensembl_gene_id), "/Users/skurscheid/Dropbox/REM project-Sebastian/CVGOA_Interactome_Overlap.txt")
