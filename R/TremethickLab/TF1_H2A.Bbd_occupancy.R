@@ -32,27 +32,6 @@ filters <- listFilters(human)
 hsapEnsembl <- makeTranscriptDbFromBiomart(biomart = "ensembl", dataset = "hsapiens_gene_ensembl")
 chromInfo <- getChromInfoFromBiomart(biomart = "ensembl", dataset = "hsapiens_gene_ensembl")
 
-# for test purposes only use a small chromosome, e.g. chr12
-seqlevels(hsapEnsembl, force = TRUE) <- c("12")
-
-# make GRanges object of transcripts and other features on chr12
-gr.tx.chr12 <- transcripts(hsapEnsembl)
-gr.5UTR.chr12 <- fiveUTRsByTranscript(hsapEnsembl)
-gr.exons.chr12 <- exons(hsapEnsembl)
-
-# load TF-1 sample 1 from bigWig
-# for now only chr12
-which <- GRanges(c("12"), IRanges(1,133851895))
-gr.tf1.s1 <- import("/Volumes//LaCie//Project_SN877_0258_YWu_JCSMR_human_ChIPseq/Sample_TF1_1/TF1_1_L001_fill.bw", which = which)
-
-# use the summarizeOverlaps() function from GenomicAlignments to extract overlapping regions
-# sum it up with sum()
-sum(data.frame(union =assay(summarizeOverlaps(gr.tx.chr12, gr.tf1.s1)))[,1])
-sum(data.frame(union =assay(summarizeOverlaps(gr.exons, gr.tf1.s1)))[,1])
-sum(data.frame(union =assay(summarizeOverlaps(gr.5UTR.chr12, gr.tf1.s1)))[,1])
-sum(data.frame(union =assay(summarizeOverlaps(which, gr.tf1.s1)))[,1])
-
-
 # reset TxDB object to include canonical chromosomes
 # and create GRanges with regions of interest
 seqlevels(hsapEnsembl, force = TRUE) <- c(seq(1,22,1), "X", "Y", "MT")
