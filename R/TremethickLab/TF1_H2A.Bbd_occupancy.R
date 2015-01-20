@@ -22,146 +22,141 @@ library("biomaRt")
 library("gdata")
 library("GO.db")
 library("GenomicFeatures")
-library("GenomeAlignments")
+library("GenomicAlignments")
 library("TxDb.Hsapiens.UCSC.hg19.knownGene")
 library("rtracklayer")
+library("AnnotationDbi")
 
-# load hg19 based Ensembl data
-human <- useMart("ensembl",dataset="hsapiens_gene_ensembl")
-filters <- listFilters(human)
-hsapEnsembl <- makeTranscriptDbFromBiomart(biomart = "ensembl", dataset = "hsapiens_gene_ensembl")
-chromInfo <- getChromInfoFromBiomart(biomart = "ensembl", dataset = "hsapiens_gene_ensembl")
+# load hg19 based Ensembl data # do this only once, save RData objects than recycle
+load("/home/skurscheid/Data/Annotations/hsapiens_gene_ensembl_GRCh37.rda")
+hsapEnsembl <- loadDb("/home/skurscheid/Data/Annotations/hsapiens_gene_ensembl_GRCh37_TxDB.sqlite")
+load("/home/skurscheid/Data/Annotations/hsapiens_gene_ensembl_chromInfo_GRCh37.rda")
 
 # reset TxDB object to include canonical chromosomes
 # and create GRanges with regions of interest
 seqlevels(hsapEnsembl, force = TRUE) <- c(seq(1,22,1), "X", "Y", "MT")
 
-#------------------------------------------------------------------------------
-# Prepare GRanges objects for the different genomic regions of interest
-#------------------------------------------------------------------------------
-gr.tx <- transcripts(hsapEnsembl)
-grl.exons.gene <- exonsBy(hsapEnsembl, by = "gene") # returns GRangesList
-grl.introns <- intronsByTranscript(hsapEnsembl)
-grl.5UTR <- fiveUTRsByTranscript(hsapEnsembl)
-grl.3UTR <- threeUTRsByTranscript(hsapEnsembl)
-grl.cds <- cdsBy(hsapEnsembl, by = "gene")
-gr.genes <- genes(hsapEnsembl)
-gr.genes <- sort(gr.genes)
-gr.tss_up1000dn50 <- promoters(gr.genes, upstream = 1000, down = 50)
-tss_up1000 <- start(gr.genes) - 1000
-gr.tss_up1000_wholegene <- GRanges(seqnames(gr.genes), IRanges(tss_up1000, end(gr.genes)), strand = strand(gr.genes))
-names(gr.tss_up1000_wholegene) <- names(gr.genes)
-gr.intergenic <- gaps(gr.genes)
-gr.intergenic_excludeTSS_up1000 <- gaps(gr.tss_up1000_wholegene)
+# load GRanges objects
+dest_dir <- "/home/skurscheid/Data/Annotations/hg19"
+load(paste(dest_dir, "gr.tx" , sep = "/"))
+load(paste(dest_dir, "grl.exons.gene", sep = "/"))
+load(paste(dest_dir, "grl.introns", sep = "/"))
+load(paste(dest_dir, "grl.5UTR", sep = "/"))
+load(paste(dest_dir, "grl.3UTR", sep = "/"))
+load(paste(dest_dir, "grl.cds", sep = "/"))
+load(paste(dest_dir, "gr.genes", sep = "/"))
+load(paste(dest_dir, "gr.tss_up1000dn50", sep = "/"))
+load(paste(dest_dir, "gr.tss_up1000_wholegene", sep = "/"))
+load(paste(dest_dir, "gr.intergenic", sep = "/"))
+load(paste(dest_dir, "gr.intergenic_excludeTSS_up1000", sep = "/"))
+load(paste(dest_dir, "grl.intron_exon", sep = "/"))
+load(paste(dest_dir, "grl.intron_exon_flank25", sep = "/"))
+load(paste(dest_dir, "grl.exon_intron_flank25", sep = "/"))
+load(paste(dest_dir, "grl.introns_flank25", sep = "/"))
+load(paste(dest_dir, "grl.exons_1st", sep = "/"))
+load(paste(dest_dir, "grl.exons_rest", sep = "/"))
+load(paste(dest_dir, "grl.exon_intron", sep = "/"))
 
-# extract starting positions of all introns to generate GRangesList for Exon->Intron boundaries
-# first remove objects withouth introns
-n1 <- lapply(grl.introns, function(x) {length(x)})
-grl.introns <- grl.introns[names(n1[which(n1 > 0)])]
-grl.exon_intron <- GRangesList(lapply(grl.introns, function(x) {
-  if (length(x) > 0){ 
-    d <- data.frame(chr = seqnames(x), start = start(x), width = 1, strand = as.character(strand(x)))
-    gr <- GRanges(as.character(d[,"chr"]), IRanges(start = as.numeric(d[,"start"]), width = as.numeric(d[,"width"])), strand = as.character(d[,"strand"]))
-    return(gr)
-  }
-}
-)
-)
+# load sequencing data (from bigWig files)
+load("/home/skurscheid/Data/Tremethick/Alignments/seq_data.rdata")
 
-# extract end positions of all introns to generate GRangesList for Intron->Exon boundaries
-grl.intron_exon <- GRangesList(lapply(grl.introns, function(x) {
-  if (length(x) > 0){ 
-    d <- data.frame(chr = seqnames(x), start = end(x), width = 1, strand = as.character(strand(x)))
-    gr <- GRanges(as.character(d[,"chr"]), IRanges(start = as.numeric(d[,"start"]), width = as.numeric(d[,"width"])), strand = as.character(d[,"strand"]))
-    return(gr)
-  }
-}
-)
-)
+# manually extracted from alignment stats
+libSize <- data.frame(sample = c("Sample_TF1_1", "Sample_TF1_2", "Sample_TF1_3", "Sample_TF1a_1", "Sample_TF1a_2", "Sample_TF1a_3"), 
+                      size = c(54375559, 49570361, 46122170, 52260493, 45097103, 44502715))
 
-grl.intron_exon_flank25 <- flank(grl.intron_exon, width = 25, both = TRUE)
-grl.exon_intron_flank25 <- flank(grl.exon_intron, width = 25, both = TRUE)
-grl.introns_flank25 <- flank(gr.introns.new, width = 25, both = TRUE)
-
-grl.exons_1st <- GRangesList(lapply(grl.exons.gene, function(x) {
-  if (length(x) > 0){
-    g <- x[1]
-    return(g)
-  }
-}))
-
-grl.exons_rest <- GRangesList(lapply(grl.exons.gene[which(l1 >= 2)], function(x) {
-    if (length(x) == 2){
-      g <- x[2]
-      if (class(g) == "GRanges"){
-        return(g)
-      }
-    } else if (length(x) > 2){
-      g <- x[2:length(x)]
-      if (class(g) == "GRanges"){
-        return(g)
-      }
-    }
-  }
-))
-
-# load the whole bigWig file
-files <- c("/Volumes//LaCie//Project_SN877_0258_YWu_JCSMR_human_ChIPseq/Sample_TF1_1/TF1_1_L001_fill.bw",
-           "/Volumes//LaCie//Project_SN877_0258_YWu_JCSMR_human_ChIPseq/Sample_TF1_2/TF1_2_combined_L001_fill.bw",
-           "/Volumes//LaCie//Project_SN877_0258_YWu_JCSMR_human_ChIPseq/Sample_TF1_3/TF1_3_L001_fill.bw",
-           "/Volumes//LaCie//Project_SN877_0258_YWu_JCSMR_human_ChIPseq/Sample_TF1a_1/TF1a_1_combined_L001_fill.bw",
-           "/Volumes//LaCie//Project_SN877_0258_YWu_JCSMR_human_ChIPseq/Sample_TF1a_2/TF1a_2_combined_L001_fill.bw",
-           "/Volumes//LaCie//Project_SN877_0258_YWu_JCSMR_human_ChIPseq/Sample_TF1a_3/TF1a_3_combined_L001_fill.bw")
-
-gr.tf1.s1 <- import("/Volumes//LaCie//Project_SN877_0258_YWu_JCSMR_human_ChIPseq/Sample_TF1_1/TF1_1_L001_fill.bw")
-
-sapply(files, function(x) print(x))
-
-l1 <- sapply(files, function(x){
-  gr.tf1.s1 <- import(x)
-  tx <- sum(data.frame(union = assay(summarizeOverlaps(reduce(gr.tx), gr.tf1.s1)))[,1])
-  exons <- sum(data.frame(union = assay(summarizeOverlaps(reduce(grl.exons.gene), gr.tf1.s1)))[,1])
-  introns <- sum(data.frame(union = assay(summarizeOverlaps(reduce(grl.introns), gr.tf1.s1)))[,1])
-  UTR5 <- sum(data.frame(union = assay(summarizeOverlaps(reduce(grl.5UTR), gr.tf1.s1)))[,1])
-  UTR3 <- sum(data.frame(union = assay(summarizeOverlaps(reduce(grl.3UTR), gr.tf1.s1)))[,1])
-  cds <- sum(data.frame(union = assay(summarizeOverlaps(reduce(gr.cds), gr.tf1.s1)))[,1])
-  genes <- sum(data.frame(union = assay(summarizeOverlaps(reduce(gr.genes), gr.tf1.s1)))[,1])
-  tss_up1000dn50 <- sum(data.frame(union = assay(summarizeOverlaps(reduce(gr.tss_up1000dn50), gr.tf1.s1)))[,1]) 
-  tss_up1000_wholegene <- sum(data.frame(union = assay(summarizeOverlaps(reduce(gr.tss_up1000_wholegene), gr.tf1.s1)))[,1]) 
-  intergenic <- sum(data.frame(union = assay(summarizeOverlaps(reduce(gr.intergenic), gr.tf1.s1)))[,1]) 
-  intergenic_excludeTSS_up1000 <- sum(data.frame(union = assay(summarizeOverlaps(reduce(gr.intergenic_excludeTSS_up1000), gr.tf1.s1)))[,1]) 
-  introns <- sum(data.frame(union = assay(summarizeOverlaps(reduce(grl.introns), gr.tf1.s1)))[,1]) 
-  exon_intron <- sum(data.frame(union = assay(summarizeOverlaps(reduce(grl.exon_intron), gr.tf1.s1)))[,1]) 
-  intron_exon <- sum(data.frame(union = assay(summarizeOverlaps(reduce(grl.intron_exon), gr.tf1.s1)))[,1]) 
-  intron_exon_flank25 <- sum(data.frame(union = assay(summarizeOverlaps(reduce(grl.intron_exon_flank25), gr.tf1.s1)))[,1]) 
-  exon_intron_flank25 <- sum(data.frame(union = assay(summarizeOverlaps(reduce(grl.exon_intron_flank25), gr.tf1.s1)))[,1]) 
-  introns_flank25 <- sum(data.frame(union = assay(summarizeOverlaps(reduce(grl.introns_flank25), gr.tf1.s1)))[,1]) 
-  exons_1st <- sum(data.frame(union = assay(summarizeOverlaps(reduce(grl.exons_1st), gr.tf1.s1)))[,1]) 
-  exons_rest <- sum(data.frame(union = assay(summarizeOverlaps(reduce(grl.exons_rest), gr.tf1.s1)))[,1]) 
+.summarize <- function(y){
+  x <- seq_data[[y]]
+  lib <- libSize[y,]$size
   
-  genes_rpb <- genes / sum(unlist(width(gr.genes)))
+  tx <- sum(data.frame(union = assay(summarizeOverlaps(reduce(gr.tx), x)))[,1]) / lib * 1000000
+  exons <- sum(data.frame(union = assay(summarizeOverlaps(reduce(grl.exons.gene), x)))[,1]) / lib * 1000000
+  introns <- sum(data.frame(union = assay(summarizeOverlaps(reduce(grl.introns), x)))[,1]) / lib * 1000000
+  UTR5 <- sum(data.frame(union = assay(summarizeOverlaps(reduce(grl.5UTR), x)))[,1]) / lib * 1000000
+  UTR3 <- sum(data.frame(union = assay(summarizeOverlaps(reduce(grl.3UTR), x)))[,1]) / lib * 1000000
+  cds <- sum(data.frame(union = assay(summarizeOverlaps(reduce(grl.cds), x)))[,1]) / lib * 1000000
+  genes <- sum(data.frame(union = assay(summarizeOverlaps(reduce(gr.genes), x)))[,1]) / lib * 1000000
+  tss_up1000dn50 <- sum(data.frame(union = assay(summarizeOverlaps(reduce(gr.tss_up1000dn50), x)))[,1]) / lib * 1000000
+  tss_up1000_wholegene <- sum(data.frame(union = assay(summarizeOverlaps(reduce(gr.tss_up1000_wholegene), x)))[,1]) / lib * 1000000
+  intergenic <- sum(data.frame(union = assay(summarizeOverlaps(reduce(gr.intergenic), x)))[,1]) / lib * 1000000
+  intergenic_excludeTSS_up1000 <- sum(data.frame(union = assay(summarizeOverlaps(reduce(gr.intergenic_excludeTSS_up1000), x)))[,1]) / lib * 1000000
+  introns <- sum(data.frame(union = assay(summarizeOverlaps(reduce(grl.introns), x)))[,1]) / lib * 1000000
+  exon_intron <- sum(data.frame(union = assay(summarizeOverlaps(reduce(grl.exon_intron), x)))[,1]) / lib * 1000000
+  intron_exon <- sum(data.frame(union = assay(summarizeOverlaps(reduce(grl.intron_exon), x)))[,1]) / lib * 1000000
+  intron_exon_flank25 <- sum(data.frame(union = assay(summarizeOverlaps(reduce(grl.intron_exon_flank25), x)))[,1]) / lib * 1000000 
+  exon_intron_flank25 <- sum(data.frame(union = assay(summarizeOverlaps(reduce(grl.exon_intron_flank25), x)))[,1]) / lib * 1000000
+  introns_flank25 <- sum(data.frame(union = assay(summarizeOverlaps(reduce(grl.introns_flank25), x)))[,1]) / lib * 1000000
+  exons_1st <- sum(data.frame(union = assay(summarizeOverlaps(reduce(grl.exons_1st), x)))[,1]) / lib * 1000000
+  exons_rest <- sum(data.frame(union = assay(summarizeOverlaps(reduce(grl.exons_rest), x)))[,1]) / lib * 1000000
+  
   tx_rpb <- tx / sum(as.numeric(unlist(width(gr.tx))))
   exons_rpb <- exons / sum(as.numeric(unlist(width(grl.exons.gene))))
-  exons_1st_rpb <- exons_1st / sum(as.numeric(unlist(width(grl.exons_1st))))
-  exons_rest_rpb <- exons_rest / sum(as.numeric(unlist(width(grl.exons_rest))))
   introns_rpb <- introns / sum(as.numeric(unlist(width(grl.introns))))
-  exon_intron_rpb <- exon_intron / sum(as.numeric(unlist(width(grl.exon_intron))))
-  intron_exon_flank25_rpb <- intron_exon_flank25 / sum(as.numeric(unlist(width(grl.intron_exon_flank25))))
-  exon_intron_flank25_rpb <- exon_intron_flank25 / sum(as.numeric(unlist(width(grl.exon_intron_flank25))))
-  introns_flank25_rpb <- introns_flank25 / sum(as.numeric(unlist(width(grl.introns_flank25))))
-  UTR5_rpb <- UTR5 / sum(unlist(width(grl.5UTR)))
-  UTR3_rpb <- UTR3 / sum(unlist(width(grl.3UTR)))
-  cds_rpb <- cds / sum(unlist(width(gr.cds)))
+  UTR5_rpb <- UTR5 / sum(as.numeric(unlist(width(grl.5UTR))))
+  UTR3_rpb <- UTR3 / sum(as.numeric(unlist(width(grl.3UTR))))
+  cds_rpb <- cds / sum(as.numeric(unlist(width(grl.cds))))
+  genes_rpb <- genes / sum(as.numeric(unlist(width(gr.genes))))
   tss_up1000dn50_rpb <- tss_up1000dn50 / sum(as.numeric(unlist(width(gr.tss_up1000dn50))))
   tss_up1000_wholegene_rpb <- tss_up1000_wholegene / sum(as.numeric(unlist(width(gr.tss_up1000_wholegene))))
   intergenic_rpb <- intergenic / sum(as.numeric(unlist(width(gr.intergenic))))
   intergenic_excludeTSS_up1000_rpb <- intergenic_excludeTSS_up1000 / sum(as.numeric(unlist(width(gr.intergenic_excludeTSS_up1000))))
-
-
-  df1 <- data.frame(genes_rpb, tx_rpb, exons_rpb, exons_1st_rpb, exons_rest_rpb, introns_rpb, exon_intron_rpb,
-                  intron_exon_flank25_rpb, exon_intron_flank25_rpb, introns_flank25_rpb, UTR5_rpb, UTR3_rpb,
-                  cds_rpb, tss_up1000dn50_rpb, tss_up1000_wholegene_rpb, intergenic_rpb, intergenic_excludeTSS_up1000_rpb)
-
-  return(df1)
+  introns_rpb <- introns / sum(as.numeric(unlist(width(grl.introns))))
+  exon_intron_rpb <- exon_intron / sum(as.numeric(unlist(width(grl.exon_intron))))
+  intron_exon_rpb <- intron_exon / sum(as.numeric(unlist(width(grl.intron_exon))))
+  intron_exon_flank25_rpb <- intron_exon_flank25 / sum(as.numeric(unlist(width(grl.intron_exon_flank25))))
+  exon_intron_flank25_rpb <- exon_intron_flank25 / sum(as.numeric(unlist(width(grl.exon_intron_flank25))))
+  introns_flank25_rpb <- introns_flank25 / sum(as.numeric(unlist(width(grl.introns_flank25))))
+  exons_1st_rpb <- exons_1st / sum(as.numeric(unlist(width(grl.exons_1st))))
+  exons_rest_rpb <- exons_rest / sum(as.numeric(unlist(width(grl.exons_rest))))
+  
+  df1 <- data.frame(tx_rpb,
+                    exons_rpb,
+                    introns_rpb,
+                    UTR5_rpb,
+                    UTR3_rpb,
+                    cds_rpb,
+                    genes_rpb,
+                    tss_up1000dn50_rpb,
+                    tss_up1000_wholegene_rpb,
+                    intergenic_rpb,
+                    intergenic_excludeTSS_up1000_rpb,
+                    introns_rpb,
+                    exon_intron_rpb,
+                    intron_exon_rpb,
+                    intron_exon_flank25_rpb,
+                    exon_intron_flank25_rpb,
+                    introns_flank25_rpb,
+                    exons_1st_rpb,
+                    exons_rest_rpb)
+                      
+  return(df1)  
 }
-)
+
+require(snowfall)
+sfInit(parallel = TRUE, cpus = 6)
+sfLibrary(GenomicRanges)
+sfLibrary(GenomicAlignments)
+sfExport(".summarize")
+sfExport("libSize")
+sfExport("seq_data")
+sfExport("gr.tx")
+sfExport("grl.exons.gene")
+sfExport("grl.introns")
+sfExport("grl.5UTR")
+sfExport("grl.3UTR")
+sfExport("grl.cds")
+sfExport("gr.genes")
+sfExport("gr.tss_up1000dn50")
+sfExport("gr.tss_up1000_wholegene")
+sfExport("gr.intergenic")
+sfExport("gr.intergenic_excludeTSS_up1000")
+sfExport("grl.introns")
+sfExport("grl.exon_intron")
+sfExport("grl.intron_exon")
+sfExport("grl.intron_exon_flank25")
+sfExport("grl.exon_intron_flank25")
+sfExport("grl.introns_flank25")
+sfExport("grl.exons_1st")
+sfExport("grl.exons_rest")
+
+l1 <- sfLapply(seq_along(seq_data), function(x) .summarize(x))
+sfStop()
