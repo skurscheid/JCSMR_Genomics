@@ -160,3 +160,30 @@ sfExport("grl.exons_rest")
 
 l1 <- sfLapply(seq_along(seq_data), function(x) .summarize(x))
 sfStop()
+
+# preparing plotting of barplots with ggplot2
+library(reshape)
+library(ggplot2)
+
+# create data frame from list
+df1 <- rbind(l1[[1]], l1[[2]], l1[[3]], l1[[4]], l1[[5]], l1[[6]])
+rownames(df1) <- c("Sample_TF1_1", "Sample_TF1_2", "Sample_TF1_3", "Sample_TF1a_1", "Sample_TF1a_2", "Sample_TF1a_3")
+
+# normalize to intergenic rpm/b
+df1.norm <- df1 / df1$intergenic_rpb
+df1.norm$id <- rownames(df1.norm)
+df1.norm$group <- unlist(lapply(strsplit(df1.norm$id, "\\_"), function(x) x[2]))
+df1.norm.melt <- melt.data.frame(df1.norm, id.vars = c("group", "id"))
+
+dfc <- summarySE(df1.norm.melt, measurevar="value", groupvars=c("group", "variable"))
+
+dfc2 <- dfc
+dfc2$variable <- factor(dfc2$variable)
+
+p <- ggplot(dfc2, aes(x=variable, y=value, fill=group)) + 
+     geom_bar(position=position_dodge(), stat="identity") +
+     geom_errorbar(aes(ymin=value-se, ymax=value+se),
+                   width=.2,                    # Width of the error bars
+                   position=position_dodge(.9))
+
+p + theme(axis.text.x = element_text(angle = 90, vjust = 0.5, size = 12))
