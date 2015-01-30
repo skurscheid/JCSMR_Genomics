@@ -26,12 +26,18 @@ library("GenomicAlignments")
 library("TxDb.Hsapiens.UCSC.hg19.knownGene")
 library("rtracklayer")
 library("AnnotationDbi")
+library("BSgenome.Hsapiens.UCSC.hg19")
 
 # load hg19 based Ensembl data # do this only once, save RData objects than recycle
 human <- useMart(biomart="ENSEMBL_MART_ENSEMBL", host="grch37.ensembl.org", path="/biomart/martservice" ,dataset="hsapiens_gene_ensembl")
 filters <- listFilters(human)
 hsapEnsembl <- makeTranscriptDbFromBiomart(biomart="ENSEMBL_MART_ENSEMBL", host="grch37.ensembl.org", dataset = "hsapiens_gene_ensembl")
-chromInfo <- getChromInfoFromBiomart(biomart="ENSEMBL_MART_ENSEMBL", host="grch37.ensembl.org", dataset = "hsapiens_gene_ensembl")
+seqlevels(hsapEnsembl, force = TRUE) <- c(seq(1,22,1), "X", "Y", "MT")
+
+genome <- BSgenome.Hsapiens.UCSC.hg19
+chromInfo <- seqlengths(genome)[1:25]
+names(chromInfo) <- gsub("chr", "", names(chromInfo))
+names(chromInfo)[25] <- "MT"
 
 save(human, file = "/home/skurscheid/Data/Annotations/hsapiens_gene_ensembl_GRCh37.rda")
 saveDb(hsapEnsembl, file = "/home/skurscheid/Data/Annotations/hsapiens_gene_ensembl_GRCh37_TxDB.sqlite")
@@ -41,19 +47,28 @@ save(chromInfo, file = "/home/skurscheid/Data/Annotations/hsapiens_gene_ensembl_
 # Prepare GRanges objects for the different genomic regions of interest
 #------------------------------------------------------------------------------
 gr.tx <- transcripts(hsapEnsembl)
+seqlengths(gr.tx) <- chromInfo
 grl.exons.gene <- exonsBy(hsapEnsembl, by = "gene") # returns GRangesList
+seqlengths(grl.exons.gene) <- chromInfo
 grl.introns <- intronsByTranscript(hsapEnsembl)
+seqlengths(grl.introns) <- chromInfo
 n1 <- lapply(grl.introns, function(x) {length(x)})
 grl.introns <- grl.introns[names(n1[which(n1 > 0)])]
 grl.5UTR <- fiveUTRsByTranscript(hsapEnsembl)
+seqlengths(grl.5UTR) <- chromInfo
 grl.3UTR <- threeUTRsByTranscript(hsapEnsembl)
+seqlengths(grl.3UTR) <- chromInfo
 grl.cds <- cdsBy(hsapEnsembl, by = "gene")
+seqlengths(grl.cds) <- chromInfo
 gr.genes <- genes(hsapEnsembl)
+seqlengths(gr.genes) <- chromInfo
 gr.genes <- sort(gr.genes)
 gr.tss_up1000dn50 <- promoters(gr.genes, upstream = 1000, down = 50)
 tss_up1000 <- start(gr.genes) - 1000
 gr.tss_up1000_wholegene <- GRanges(seqnames(gr.genes), IRanges(tss_up1000, end(gr.genes)), strand = strand(gr.genes))
+gr.tss_up1000_dn1000 <- GRanges(seqnames(gr.genes), IRanges(tss_up1000, tss_up1000 + 2000), strand = strand(gr.genes))
 names(gr.tss_up1000_wholegene) <- names(gr.genes)
+names(gr.tss_up1000_dn1000) <- names(gr.genes)
 gr.intergenic <- gaps(gr.genes)
 gr.intergenic_excludeTSS_up1000 <- gaps(gr.tss_up1000_wholegene)
 
@@ -116,6 +131,7 @@ save(grl.3UTR, file = paste(dest_dir, "grl.3UTR", sep = "/"))
 save(grl.cds, file = paste(dest_dir, "grl.cds", sep = "/"))
 save(gr.genes, file = paste(dest_dir, "gr.genes", sep = "/"))
 save(gr.tss_up1000dn50, file = paste(dest_dir, "gr.tss_up1000dn50", sep = "/"))
+save(gr.tss_up1000_dn1000, file = paste(dest_dir, "gr.tss_up1000_dn1000", sep = "/"))
 save(gr.tss_up1000_wholegene, file = paste(dest_dir, "gr.tss_up1000_wholegene", sep = "/"))
 save(gr.intergenic, file = paste(dest_dir, "gr.intergenic", sep = "/"))
 save(gr.intergenic_excludeTSS_up1000, file = paste(dest_dir, "gr.intergenic_excludeTSS_up1000", sep = "/"))
