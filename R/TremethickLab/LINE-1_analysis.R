@@ -44,46 +44,8 @@ gr.repeatMasker.LINE1 <- gr.repeatMasker[which(gr.repeatMasker$mcols.repClass ==
 seqlevels(gr.repeatMasker.LINE1, force = T) <- canonicalChr
 gr.repeatMasker.LINE1 <- sort(gr.repeatMasker.LINE1)
 
-# load peakranger ccat results - detecting broad regions
-gr.peakranger_dt_h2az <- import("peakranger_analysis/DT_H2A.Z/DT_H2A.Z_region.bed")
-gr.peakranger_dt_h3k4me3 <- import("peakranger_analysis/DT_H3K4me3/DT_H3K4me3_region.bed")
-gr.peakranger_g1_h2az <- import("peakranger_analysis/G1_H2A.Z/G1_H2A.Z_region.bed")
-gr.peakranger_g1_h3k4me3 <- import("peakranger_analysis/G1_H3K4me3/G1_H3K4me3_region.bed")
-
-# only work with canonical chromosomes
-seqlevels(gr.repeatMasker, force = T) <- canonicalChr
-seqlevels(gr.peakranger_dt_h2az, force = T) <- canonicalChr
-seqlevels(gr.peakranger_g1_h2az, force = T) <- canonicalChr
-seqlevels(gr.peakranger_g1_h3k4me3, force = T) <- canonicalChr
-seqlevels(gr.peakranger_dt_h3k4me3, force = T) <- canonicalChr
-
-# only retain regions with FDR <= 10%
-gr.peakranger_dt_h2az <- gr.peakranger_dt_h2az[which(gr.peakranger_dt_h2az$score <= 0.10)]
-gr.peakranger_g1_h2az <- gr.peakranger_g1_h2az[which(gr.peakranger_g1_h2az$score <= 0.10)]
-gr.peakranger_g1_h3k4me3 <- gr.peakranger_g1_h3k4me3[which(gr.peakranger_g1_h3k4me3$score <= 0.10)]
-gr.peakranger_dt_h3k4me3 <- gr.peakranger_dt_h3k4me3[which(gr.peakranger_dt_h3k4me3$score <= 0.10)]
-
-# inspection of data reveals that only "+" strand regions present
-# this seems odd, for now I will replace "+" with "*"
-strand(gr.peakranger_dt_h2az) <- "*"
-strand(gr.peakranger_g1_h2az) <- "*"
-strand(gr.peakranger_g1_h3k4me3) <- "*"
-strand(gr.peakranger_dt_h3k4me3) <- "*"
-
-# sort the data
-gr.peakranger_dt_h2az <- sort(gr.peakranger_dt_h2az)
-gr.peakranger_g1_h2az <- sort(gr.peakranger_g1_h2az)
-gr.peakranger_g1_h3k4me3 <- sort(gr.peakranger_g1_h3k4me3)
-gr.peakranger_dt_h3k4me3 <- sort(gr.peakranger_dt_h3k4me3)
-
-
-# retain only unique regions, i.e. exclude common between DT and G1 samples
-gr.peakranger_dt_h2az.unique <- gr.peakranger_dt_h2az[-which(gr.peakranger_dt_h2az$name %in% subsetByOverlaps(gr.peakranger_dt_h2az, gr.peakranger_g1_h2az)$name)]
-gr.peakranger_g1_h2az.unique <- gr.peakranger_g1_h2az[-which(gr.peakranger_g1_h2az$name %in% subsetByOverlaps(gr.peakranger_g1_h2az, gr.peakranger_dt_h2az)$name)]
-gr.peakranger_g1_h3k4me3.unique <- gr.peakranger_g1_h3k4me3[-which(gr.peakranger_g1_h3k4me3$name %in% subsetByOverlaps(gr.peakranger_g1_h3k4me3, gr.peakranger_dt_h3k4me3)$name)]
-gr.peakranger_dt_h3k4me3.unique <- gr.peakranger_dt_h3k4me3[-which(gr.peakranger_dt_h3k4me3$name %in% subsetByOverlaps(gr.peakranger_dt_h3k4me3, gr.peakranger_g1_h3k4me3)$name)]
-
-# results of using the ranger function (for narrow peaks)
+#---------------------------------------------------------
+# results of using the peakranger "ranger" function (for narrow peaks)
 dat.peakranger_narrow <- data.frame(wd = rep("/home/skurscheid/Data/Tremethick/LINE_1_project/peakranger_analysis/", 4), 
                                     cell = c("DT", "DT", "G1", "G1"), 
                                     mark = c("H2AZ", "H3K4me3", "H2AZ", "H3K4me3"), 
