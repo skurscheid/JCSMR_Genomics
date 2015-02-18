@@ -1,4 +1,4 @@
-#  <>
+#  TF1_H2A.Bbd_occupancy.R
 #
 #  Copyright 2015 Sebastian Kurscheid <sebastian.kurscheid@anu.edu.au>
 #  
@@ -37,26 +37,27 @@ load("/home/skurscheid/Data/Annotations/hsapiens_gene_ensembl_chromInfo_GRCh37.r
 seqlevels(hsapEnsembl, force = TRUE) <- c(seq(1,22,1), "X", "Y", "MT")
 
 # load GRanges objects
-dest_dir <- "/home/skurscheid/Data/Annotations/hg19"
-load(paste(dest_dir, "gr.tx" , sep = "/"))
-load(paste(dest_dir, "grl.exons.gene", sep = "/"))
-load(paste(dest_dir, "grl.introns", sep = "/"))
-load(paste(dest_dir, "grl.5UTR", sep = "/"))
-load(paste(dest_dir, "grl.3UTR", sep = "/"))
-load(paste(dest_dir, "grl.cds", sep = "/"))
-load(paste(dest_dir, "gr.genes", sep = "/"))
-load(paste(dest_dir, "gr.tss_up1000dn50", sep = "/"))
-load(paste(dest_dir, "gr.tss_up1000_dn1000", sep = "/"))
-load(paste(dest_dir, "gr.tss_up1000_wholegene", sep = "/"))
-load(paste(dest_dir, "gr.intergenic", sep = "/"))
-load(paste(dest_dir, "gr.intergenic_excludeTSS_up1000", sep = "/"))
-load(paste(dest_dir, "grl.intron_exon", sep = "/"))
-load(paste(dest_dir, "grl.intron_exon_flank25", sep = "/"))
-load(paste(dest_dir, "grl.exon_intron_flank25", sep = "/"))
-load(paste(dest_dir, "grl.introns_flank25", sep = "/"))
-load(paste(dest_dir, "grl.exons_1st", sep = "/"))
-load(paste(dest_dir, "grl.exons_rest", sep = "/"))
-load(paste(dest_dir, "grl.exon_intron", sep = "/"))
+#dest_dir <- "/home/skurscheid/Data/Annotations/hg19"
+dest_dir <- "/home/skurscheid/Data/Annotations/hg38"
+load(paste(dest_dir, "gr.tx.rda" , sep = "/"))
+load(paste(dest_dir, "grl.exons.gene.rda", sep = "/"))
+load(paste(dest_dir, "grl.introns.rda", sep = "/"))
+load(paste(dest_dir, "grl.5UTR.rda", sep = "/"))
+load(paste(dest_dir, "grl.3UTR.rda", sep = "/"))
+load(paste(dest_dir, "grl.cds.rda", sep = "/"))
+load(paste(dest_dir, "gr.genes.rda", sep = "/"))
+load(paste(dest_dir, "gr.tssUp1000Dn50.rda", sep = "/"))
+load(paste(dest_dir, "gr.tssUp1000Dn1000.rda", sep = "/"))
+load(paste(dest_dir, "gr.tssUp1000Wholegene.rda", sep = "/"))
+load(paste(dest_dir, "gr.intergenic.rda", sep = "/"))
+load(paste(dest_dir, "gr.intergenicExcludeTSSUp1000.rda", sep = "/"))
+load(paste(dest_dir, "grl.intronExon.rda", sep = "/"))
+load(paste(dest_dir, "grl.introExonFlank25.rda", sep = "/"))
+load(paste(dest_dir, "grl.exonIntronFlank25.rda", sep = "/"))
+load(paste(dest_dir, "grl.intronsFlank25.rda", sep = "/"))
+load(paste(dest_dir, "grl.exons1st.rda", sep = "/"))
+load(paste(dest_dir, "grl.exonsRest.rda", sep = "/"))
+load(paste(dest_dir, "grl.exonIntron.rda", sep = "/"))
 
 # load sequencing data (from bigWig files)
 load("/home/skurscheid/Data/Tremethick/Alignments/seq_data.rdata")
