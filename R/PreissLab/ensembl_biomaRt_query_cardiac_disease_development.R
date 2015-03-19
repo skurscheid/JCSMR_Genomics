@@ -28,10 +28,10 @@ human <- useMart("ensembl",dataset="hsapiens_gene_ensembl")
 mouse <- useMart("ensembl", dataset = "mmusculus_gene_ensembl")
 
 # list available filters
-filters <- listFilters(ensembl)
+filters <- listFilters(mouse)
 
 # list available attributes
-attribs <- listAttributes(ensembl)
+attribs <- listAttributes(mouse)
 
 pages <- attributePages(ensembl)
 
@@ -51,7 +51,7 @@ cvgoa <- read.table("/Users/skurscheid/Dropbox/REM project-Sebastian/Annotations
 uniprot <- read.csv("/Users/skurscheid/Dropbox/REM project-Sebastian/Annotations/uniprot_search_cardiac_OR_heart_disease.csv", header = T)
 
 # List of proteins identified to bind RNA - Yalin
-interactome <- read.xls("/Users/skurscheid/Dropbox/REM project-Sebastian/HL-1 interactome superset.xlsx", sheet = 1)
+interactome <- read.xls("~/Dropbox/REM project-Sebastian/HL-1 interactome superset.xlsx", sheet = 1)
 
 # retrieve human Ensembl Gene IDs corresponding to UniProt proteins
 ens.hsap.ids <- getBM(attributes = c("ensembl_gene_id"), values = uniprot$Entry, filters = "uniprot_swissprot", mart = human)
@@ -111,3 +111,5 @@ writeLines(intersect(interactome$ENSEMBL.1145, ens.mmus.cvgoa.attribs.homology$e
 writeLines(intersect(ens.mmus.ids, interactome$ENSEMBL.1145), "/Users/skurscheid/Dropbox/REM project-Sebastian/UniProt_Heart_Disease_Interactome_Overlap.txt")
 writeLines(unique(ens.mmus.cvgoa.attribs.homology.go.rna_bind$ensembl_gene_id), "/Users/skurscheid/Dropbox/REM project-Sebastian/CVGOA_Interactome_Overlap_Orthologs_RBP.txt")
 writeLines(unique(ens.mmus.cvgoa.wcl), "/Users/skurscheid/Dropbox/REM project-Sebastian/CVGOA_WCL_Overlap.txt")
+
+
