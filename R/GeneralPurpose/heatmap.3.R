@@ -1,4 +1,5 @@
 #### modification de heatmap.2 from R package gplots (Monday, August 02 2010 by pbady)
+# can be used for more customizable heatmaps
 require(gtools)
 heatmap.3 <- function (x, Rowv = TRUE, Colv = if (symm) "Rowv" else TRUE,
           distfun = dist, hclustfun = hclust, dendrogram = c("both",
