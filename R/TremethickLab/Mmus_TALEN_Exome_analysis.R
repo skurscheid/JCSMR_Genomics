@@ -47,7 +47,23 @@ l.data <- lapply(1:length(tab1$samples), function(x) {
   b1 <- import(paste(data_dir, "/Sample_", tab1$samples[x], "/", tab1$samples[x], ".bam", sep = ""), param = p1)
 })
 
+l.data <- lapply(1:length(loc), function(x) {
+  p1 <- ScanBamParam(what = scanBamWhat(), which = flank(loc[x], 250, both = TRUE), flag = scanBamFlag(isDuplicate = F, isProperPair = T))
+  b1 <- GAlignmentsList(sapply(tab1$samples, function(y) import(paste(data_dir, "/Sample_", y, "/", y, ".bam", sep = ""), param = p1)))
+})
 
+l.cs.flank <- lapply(1:length(loc), function(x) {
+  region1 <- flank(loc[x], 250, both = F)
+  region2 <- GRanges(as.character(seqnames(loc[x])), IRanges(start = end(loc[x]), width = 250), strand = "*")
+  af1 <- lapply(tab1$samples, function(y) alphabetFrequencyFromBam(BamFile(paste(data_dir, "/Sample_", y, "/", y, ".bam", sep = "")), param=region1, baseOnly=TRUE))
+  af2 <- lapply(tab1$samples, function(y) alphabetFrequencyFromBam(BamFile(paste(data_dir, "/Sample_", y, "/", y, ".bam", sep = "")), param=region2, baseOnly=TRUE))
+  af1 <- Reduce("+", af1)
+  af2 <- Reduce("+", af2)
+  
+  cm1a1 <- t(af1[ , DNA_BASES])
+  cm1a2 <- t(af2[ , DNA_BASES])
+  cbind(cm_to_cs(cm1a1), cm_to_cs(cm1a2))
+})
 
 
 
