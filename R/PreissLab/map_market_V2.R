@@ -49,14 +49,20 @@ map.marketV2 <- function (id, area, group, color, scale = NULL, lab = c(group = 
                            ]
   group.data$color <- rep(NULL, nrow(group.data))
   color.ramp.pos <- colorRamp(c("black", "orange"))
-  color.ramp.neg <- colorRamp(c("black", "red"))
+  color.ramp.neg <- colorRamp(c("black", "blue"))
   color.ramp.rgb <- function(x) {
     col.mat <- mapply(function(x) {
-      color.ramp.pos(abs(x))
+      if (x < 0) {
+        color.ramp.neg(abs(x))
+      }
+      else {
+        color.ramp.pos(abs(x))
+      }
     }, x)
     mapply(rgb, col.mat[1, ], col.mat[2, ], col.mat[3, ], 
            max = 255)
   }
+  
   add.viewport <- function(z, label, color, x.0, y.0, x.1, 
                            y.1) {
     for (i in 1:length(label)) {
@@ -153,7 +159,7 @@ map.marketV2 <- function (id, area, group, color, scale = NULL, lab = c(group = 
   legend.ncols <- 51
   l.x <- (0:(legend.ncols - 1))/(legend.ncols)
   l.y <- unit(0.25, "npc")
-  l.cols <- color.ramp.rgb(seq(0, 1, by = 2/(legend.ncols - 1)))
+  l.cols <- color.ramp.rgb(seq(-1, 1, by = 2/(legend.ncols - 1)))
   if (is.null(scale)) {
     l.end <- max(abs(data$color.orig))
   }
@@ -163,10 +169,10 @@ map.marketV2 <- function (id, area, group, color, scale = NULL, lab = c(group = 
   top.list <- gList(textGrob(label = main, y = unit(0.7, "npc"), 
                              just = c("center", "center"), 
                              gp = gpar(cex = 2)), 
-                             #segmentsGrob(x0 = seq(0, 1, by = 0.25), y0 = unit(0.25, "npc"), 
-                            #              x1 = seq(0, 1, by = 0.25), y1 = unit(0.2, "npc")) #,
-                             rectGrob(x = l.x, y = l.y, width = 1/legend.ncols, height = unit(1, "lines"), just = c("left", "bottom"), gp = gpar(col = NA, fill = l.cols), default.units = "npc")#, 
-                             #textGrob(label = format(l.end * seq(-1, 1, by = 0.5), trim = TRUE),  x = seq(0, 1, by = 0.25), y = 0.1, default.units = "npc", just = c("center", "center"), gp = gpar(col = "lightgrey", cex = 0.8, fontface = "bold"))
+                             segmentsGrob(x0 = seq(0, 1, by = 0.25), y0 = unit(0.25, "npc"), 
+                                          x1 = seq(0, 1, by = 0.25), y1 = unit(0.2, "npc")),
+                             rectGrob(x = l.x, y = l.y, width = 1/legend.ncols, height = unit(1, "lines"), just = c("left", "bottom"), gp = gpar(col = NA, fill = l.cols), default.units = "npc"), 
+                             textGrob(label = format(l.end * seq(-1, 1, by = 0.5), trim = TRUE),  x = seq(0, 1, by = 0.25), y = 0.1, default.units = "npc", just = c("center", "center"), gp = gpar(col = "lightgrey", cex = 0.8, fontface = "bold"))
                     )
   options(op)
   top.tree <- gTree(vp = top.viewport, name = "TOP", children = top.list)
