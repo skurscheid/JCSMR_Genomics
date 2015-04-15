@@ -17,6 +17,8 @@
 #  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
 #  MA 02110-1301, USA.
 
+source("/Users/u1001407/Dropbox/Development/GeneralPurpose/R/heatmap.3.R")
+
 library(ade4)
 library(cluster)
 library(matlab)
