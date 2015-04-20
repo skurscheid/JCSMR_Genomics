@@ -28,7 +28,7 @@ library("GO.db")
 library("KEGGREST")
 library("jsonlite")
 
-source("/Users/u1001407/Dropbox/Development/JCSMR_Genomics/R/PreissLab/map_market_V2.R")
+source("/Users/u1001407/Dropbox/Development/GeneralPurpose/R/map_market_V2.R")
 
 # custom functions
 keggConv.batch <- function(x, max = 100, org = "mmu", id.type = "ncbi-geneid") {
@@ -157,21 +157,22 @@ length(unique(mitochondrial.human_homologs[which(mitochondrial.human_homologs$hs
 # human
 length(unique(mitochondrial.human_homologs.mim[which(!is.na(mitochondrial.human_homologs.mim$mim_morbid_accession)),]$ensembl_gene_id))
 
-
-
 # rectangular tree map of top level KEGG categories
-#-------------------------------------------------------------------------------------------------------------
-# total interactome
-#-------------------------------------------------------------------------------------------------------------
+#---total interactome----------------------------------------------------------------------------------------------------------
+# 
 interactome <- read.xls("/Users/u1001407/Dropbox/REM project-Sebastian/HL-1 interactome superset.xlsx", sheet = 1, as.is = T)
 interactome <- interactome[, c(1,2)]
 colnames(interactome) <- c("gene_symbol", "ensembl_gene_id")
 entrez_ids <- getBM(attributes = c("ensembl_gene_id","entrezgene"), values = interactome[,"ensembl_gene_id"], filters = "ensembl_gene_id", mart = mouse)
 
+interactome.human_homologs <- getBM(attributes = c("ensembl_gene_id","hsapiens_homolog_ensembl_gene"), values = interactome[,"ensembl_gene_id"], filters = "ensembl_gene_id", mart = mouse)
+interactome.mim <- getBM(attributes = c("ensembl_gene_id", "mim_morbid_accession"), values = interactome.human_homologs[,"hsapiens_homolog_ensembl_gene"], filters = "ensembl_gene_id", mart = human)
+
 # remove ensembl_gene_ids which have duplicated entrez_ids
 entrez_ids <- entrez_ids[-which(duplicated(entrez_ids$ensembl_gene_id)),]
 interactome <- merge(interactome, entrez_ids, by.x = "ensembl_gene_id", by.y = "ensembl_gene_id", all.x = T)
 rm(entrez_ids)
+
 
 interactome.entrezIDs <- unique(interactome[!is.na(interactome$entrezgene),]$entrezgene)
 interactome.keggIDs <- keggConv.batch(interactome.entrezIDs)
@@ -831,7 +832,7 @@ pathways.genes.entrez_ids <- unique(gsub("mmu:", "", as.character(unlist(pathway
 
 bsid2info <- read.csv(paste(path, "bsid2info.brief.csv", sep = ""), header = F, as.is = T)
   
-linked.pathways <- lapply(pathways, function(x) {
+interactome.linked.pathways.metab <- lapply(interactome.pathways.metabolism, function(x) {
   bsid <- data.frame(bsid2info[which(bsid2info$V3 == x), c("V1", "V3", "V4")])
   df1 <- data.frame(biosystems_tables$biosystems_biosystems_linked[which(biosystems_tables$biosystems_biosystems_linked$V1 == bsid[,"V1"]),])
   if (nrow(df1) > 0){
@@ -843,7 +844,22 @@ linked.pathways <- lapply(pathways, function(x) {
   return(l)
 })
 
+names(interactome.linked.pathways.metab) <- interactome.pathways.metabolism
+interactome.metab.map <- lapply(interactome.linked.pathways.metab, function(x) {
+  if (nrow(x[[2]]) > 0) {
+    node1 <- rep(x[[1]][,2], nrow(x[[2]]))
+    node2 <- x[[2]][,3]
+    df <- data.frame(node1, node2)
+    return(df)
+  }
+  })
+names(interactome.metab.map[[1]])
+
+
 linked.pathways.keggIDs <- unique(unlist(lapply(linked.pathways, function(x) x[[2]][,3])))
+
+
+
 
 names(linked.pathways) <- pathways
 
@@ -924,7 +940,3 @@ map.marketV2(id = df1[which(!df1$class == "Global and overview maps"),]$V1,
            color = log2(df1[which(!df1$class == "Global and overview maps"),]$frac + 1),
            main = "Cellular pathway",
            lab = c(TRUE, FALSE))
-
-
-
-
