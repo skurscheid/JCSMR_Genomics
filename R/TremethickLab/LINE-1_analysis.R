@@ -122,6 +122,36 @@ grl.peakranger_narrow <- lapply(grl.peakranger_narrow, sort)
 grl.peakranger_narrow <- GRangesList(grl.peakranger_narrow)
 names(grl.peakranger_narrow) <- apply(dat.peakranger_narrow, 1, function(x) paste(x["cell"], x["mark"], sep = "_"))
 
+#---------------------------------------------------------
+# results of "arem" analysis (for narrow peaks)
+dat.arem_narrow <- data.frame(wd = rep("/home/skurscheid/Data/Tremethick/LINE_1_project/arem_analysis/", 3), 
+                                    cell = c("DT", "G1", "S"), 
+                                    mark = rep(c("H2AZ"), 3), 
+                                    peak = rep("peaks", 3))
+
+grl.arem_narrow <- apply(dat.arem_narrow, 1, function(x) {
+  f <- paste(x["wd"], "/", 
+             x["cell"], "_", 
+             x["mark"], "/", 
+             x["cell"], "_", 
+             x["mark"], "_", 
+             "arem", "_",
+             x["peak"], 
+             ".bed", 
+             sep = "")
+  if (file.exists(f) == TRUE){
+    gr <- import(f)
+    seqlevels(gr, force = TRUE) <- canonicalChr
+  }
+  return(gr)
+})
+
+
+grl.arem_narrow <- lapply(grl.arem_narrow, unstrand)
+grl.arem_narrow <- lapply(grl.arem_narrow, sort)
+grl.arem_narrow <- GRangesList(grl.arem_narrow)
+names(grl.arem_narrow) <- apply(grl.arem_narrow, 1, function(x) paste(x["cell"], x["mark"], sep = "_"))
+
 #--------------------------------------------------------------------------
 # comparison between MACS2 and PeakRanger
 # G1 cells, H2A.Z, S cells
