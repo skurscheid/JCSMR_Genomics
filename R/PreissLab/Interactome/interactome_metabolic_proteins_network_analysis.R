@@ -63,11 +63,11 @@ filters <- listFilters(mouse)
 # list available attributes
 attribs <- listAttributes(mouse)
 pages <- attributePages(mouse)
-hsap.attribs <- list.attributes(human)
+hsap.attribs <- listAttributes(human)
 
-#-------------------------------------------------------------------------------------------------------------
-# interactome mitochondrial proteins
-#-------------------------------------------------------------------------------------------------------------
+#-------------------------------interactome mitochondrial proteins
+------------------------------------------------------------------------------
+# 
 mitochondrial <- read.xls("/Users/u1001407/Dropbox/REM project-Sebastian/Mitochondria list 26March15.xlsx", sheet = 1, as.is = T)
 colnames(mitochondrial)[2] <- "ensembl_gene_id"
 entrez_ids <- getBM(attributes = c("ensembl_gene_id","entrezgene"), values = mitochondrial[,"ensembl_gene_id"], filters = "ensembl_gene_id", mart = mouse)
@@ -160,9 +160,9 @@ length(unique(mitochondrial.human_homologs.mim[which(!is.na(mitochondrial.human_
 # rectangular tree map of top level KEGG categories
 #---total interactome----------------------------------------------------------------------------------------------------------
 # 
-interactome <- read.xls("/Users/u1001407/Dropbox/REM project-Sebastian/HL-1 interactome superset.xlsx", sheet = 1, as.is = T)
-interactome <- interactome[, c(1,2)]
-colnames(interactome) <- c("gene_symbol", "ensembl_gene_id")
+interactome <- read.xls("/Users/u1001407/Dropbox/REM project-Sebastian/HL-1 interactome superset.xlsx", sheet = "Sheet1" , as.is = T)
+colnames(interactome)[c(1,2)] <- c("ensembl_gene_id", "gene_symbol")
+
 entrez_ids <- getBM(attributes = c("ensembl_gene_id","entrezgene"), values = interactome[,"ensembl_gene_id"], filters = "ensembl_gene_id", mart = mouse)
 
 interactome.human_homologs <- getBM(attributes = c("ensembl_gene_id","hsapiens_homolog_ensembl_gene"), values = interactome[,"ensembl_gene_id"], filters = "ensembl_gene_id", mart = mouse)
@@ -172,13 +172,12 @@ interactome.mim <- getBM(attributes = c("ensembl_gene_id", "mim_morbid_accession
 entrez_ids <- entrez_ids[-which(duplicated(entrez_ids$ensembl_gene_id)),]
 interactome <- merge(interactome, entrez_ids, by.x = "ensembl_gene_id", by.y = "ensembl_gene_id", all.x = T)
 rm(entrez_ids)
-
-
 interactome.entrezIDs <- unique(interactome[!is.na(interactome$entrezgene),]$entrezgene)
 interactome.keggIDs <- keggConv.batch(interactome.entrezIDs)
 keggQ <- lapply(interactome.keggIDs, function(x) keggGet(x))
 interactome.pathways <- unique(unlist(lapply(strsplit(names(unlist(lapply(keggQ, function(x) x[[1]]$"PATHWAY"))), "\\."), function(x) x[3])))
 interactome.pathways.genes <- lapply(interactome.pathways, function(x) keggLink("genes", x))
+names(interactome.pathways.genes) <- interactome.pathways
 interactome.pathways.genes.entrez_ids <- unique(gsub("mmu:", "", as.character(unlist(interactome.pathways.genes))))
 interactome.df <- kegg.brite[gsub("mmu", "", interactome.pathways), ]
 interactome.df$ID <- rownames(interactome.df)
@@ -262,10 +261,7 @@ makeOMIMString <- function(x){
 st <- makeOMIMString(interactome.human_homologs.mim[which(!is.na(interactome.human_homologs.mim$mim_morbid_accession )),]$mim_gene_accession[1:20])
 
 interactome.omim <- fromJSON(unlist(paste("http://api.omim.org/api/entry?mimNumber=", st, "&exclude=text&format=json&apiKey=FF451B4EBBAFBD9015EB10060EA6C8855D61E1ED", sep = ""))
-
-
-                             
-                             
+                                                
 #-------------whole cell lysate proteome------------------------------------------------------------------------------------------------
 wcl <- read.xls("/Users/u1001407/Dropbox/REM project-Sebastian/HL-1 interactome superset.xlsx", sheet = "WCL", as.is = T)
 colnames(wcl) <- c("gene_symbol", "ensembl_gene_id")

@@ -12,9 +12,8 @@ attribs.hsap <- listAttributes(human)
 
 # load IDs
 cv.assoc.proteins <- read.xls("/Volumes/MHS//workgroups/jcsmr//PreissLab/Sebastian Kurscheid/Annotations//GO/cardiovascular_associated_proteins.xlsx", sheet = 1, header = T, as.is = T)
-interactome <- read.xls("/Users/u1001407/Dropbox/REM project-Sebastian/HL-1 interactome superset.xlsx", sheet = 1, as.is = T)
-interactome <- interactome[, c(1,2)]
-colnames(interactome) <- c("gene_symbol", "ensembl_gene_id")
+interactome <- read.xls("/Users/u1001407/Dropbox/REM project-Sebastian/HL-1 interactome superset.xlsx", sheet = "Sheet1" , as.is = T)
+colnames(interactome)[c(1,2)] <- c("ensembl_gene_id", "gene_symbol")
 
 # biomaRt attribute uniprot_swissprot
 mmus.cv.assoc <- getBM(attributes = c("ensembl_gene_id", "uniprot_swissprot"), filters = "uniprot_swissprot", values = cv.assoc.proteins[which(cv.assoc.proteins$Taxon == "10090"), "ID"], mart = mouse)
@@ -30,28 +29,42 @@ interactome.go_ids <- getBM(attributes = c("ensembl_gene_id", "go_id"), filters 
 cv.go_terms.bp <- c("GO:0007507", "GO:0048738", "GO:0008015", "GO:0050878", "GO:0001944", "GO:0042060", "GO:0006979", "GO:0016055", "GO:0006520", "GO:0050817", "GO:0006629", "GO:0006936", "GO:0048771", "GO:0051145", "GO:0007517", "GO:0042692", "GO:0048659")
 cv.go_terms.cc <- c("GO:0005739", "GO:0005578")
 
-# some plotting
+#---------------------some plotting----------------------------------------------------------------------
+# from GO.db
 xx <- as.list(GOTERM)
 
-interactome.cv.go_terms.bp.counts <- sapply(cv.go_terms.bp, function(x) length(which(ss$go_id == x)))
-df1 <- as.data.frame(interactome.cv.go_terms.bp.counts)
-df1$id <- names(interactome.cv.go_terms.bp.counts)
-colnames(df1) <- c("count", "id")
-df1$term <- sapply(rownames(df1), function(x) xx[x][[1]]@Term)
-hist1 <- ggplot(df1, aes(term, count)) + geom_histogram(stat = "identity", fill = "blue")
-hist1 <- hist1 + theme(axis.text.x = element_text(angle = 90))
+go.bp.offspring <- as.list(GOBPOFFSPRING)
+go.cc.offspring <- as.list(GOCCOFFSPRING)
 
-interactome.cv.go_terms.cc.counts <- sapply(cv.go_terms.cc, function(x) length(which(ss$go_id == x)))
-df.go_cc <- as.data.frame(interactome.cv.go_terms.cc.counts)
+interactome.cv.go_bp.offsp <- sapply(cv.go_terms.bp, function(x) length(unique(interactome.go_ids[which(interactome.go_ids$go_id %in% unlist(go.bp.offspring[x])), "ensembl_gene_id"])))
+interactome.cv.go_cc.offsp <- sapply(cv.go_terms.cc, function(x) length(unique(interactome.go_ids[which(interactome.go_ids$go_id %in% unlist(go.cc.offspring[x])), "ensembl_gene_id"])))
+
+df.go_bp <- as.data.frame(interactome.cv.go_bp.offsp)
+df.go_bp$id <- names(interactome.cv.go_bp.offsp)
+colnames(df.go_bp) <- c("count", "id")
+df.go_bp$term <- sapply(rownames(df.go_bp), function(x) xx[x][[1]]@Term)
+n <- length(unique(interactome.go_ids[which(interactome.go_ids$go_id %in% unlist(go.bp.offspring[cv.go_terms.bp])), "ensembl_gene_id"]))
+hist.go_bp <- ggplot(df.go_bp, aes(term, count)) + geom_histogram(stat = "identity", fill = "blue")
+hist.go_bp <- hist.go_bp + theme(axis.text.x = element_text(angle = 90))
+hist.go_bp <- hist.go_bp + labs(title = paste("CV-associated Interactome genes\n GO BP [N = ", n, "]", sep = ""))
+
+pdf("/Users/u1001407/Dropbox/REM project-Sebastian/Interactome_cardiovascular_assoc_genes_GO_BP_histogram.pdf", paper = "a4")
+hist.go_bp
+dev.off()
+
+df.go_cc <- as.data.frame(interactome.cv.go_cc.offsp)
 colnames(df.go_cc)[1] <- "count"
 df.go_cc$id <- rownames(df.go_cc)
 df.go_cc$term <- sapply(rownames(df.go_cc), function(x) xx[x][[1]]@Term)
 hist.go_cc <- ggplot(df.go_cc, aes(term, count)) + geom_histogram(stat = "identity", fill = "blue")
-hist.go_cc <- hist.go_cc + theme(axis.text.x = element_text(angle = 0), plot.title = element_text("CV-associated Interactome genes\n GO CC [N = "))
+n <- length(unique(interactome.go_ids[which(interactome.go_ids$go_id %in% unlist(go.cc.offspring[cv.go_terms.cc])), "ensembl_gene_id"]))
+hist.go_cc <- hist.go_cc + theme(axis.text.x = element_text(angle = 0))
+hist.go_cc <- hist.go_cc + labs(title = paste("CV-associated Interactome genes\n GO CC [N = ", n, "]", sep = ""))
 
 pdf("/Users/u1001407/Dropbox/REM project-Sebastian/Interactome_cardiovascular_assoc_genes_GO_CC_histogram.pdf", paper = "a4")
 hist.go_cc
 dev.off()
+
 
 
 
