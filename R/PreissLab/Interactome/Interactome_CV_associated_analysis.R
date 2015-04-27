@@ -39,6 +39,10 @@ go.cc.offspring <- as.list(GOCCOFFSPRING)
 interactome.cv.go_bp.offsp <- sapply(cv.go_terms.bp, function(x) length(unique(interactome.go_ids[which(interactome.go_ids$go_id %in% unlist(go.bp.offspring[x])), "ensembl_gene_id"])))
 interactome.cv.go_cc.offsp <- sapply(cv.go_terms.cc, function(x) length(unique(interactome.go_ids[which(interactome.go_ids$go_id %in% unlist(go.cc.offspring[x])), "ensembl_gene_id"])))
 
+interactome.cv.go_bp.offsp.IDs <- sapply(cv.go_terms.bp, function(x) unique(interactome.go_ids[which(interactome.go_ids$go_id %in% unlist(go.bp.offspring[x])), "ensembl_gene_id"]))
+interactome.cv.go_cc.offsp.IDs <- sapply(cv.go_terms.cc, function(x) unique(interactome.go_ids[which(interactome.go_ids$go_id %in% unlist(go.cc.offspring[x])), "ensembl_gene_id"]))
+
+
 df.go_bp <- as.data.frame(interactome.cv.go_bp.offsp)
 df.go_bp$id <- names(interactome.cv.go_bp.offsp)
 colnames(df.go_bp) <- c("count", "id")
@@ -65,6 +69,22 @@ pdf("/Users/u1001407/Dropbox/REM project-Sebastian/Interactome_cardiovascular_as
 hist.go_cc
 dev.off()
 
+# make a table with GO terms and associated gene IDs
+df1 <- data.frame(matrix(nrow = max(interactome.cv.go_bp.offsp) + 1, ncol = length(interactome.cv.go_bp.offsp)))
+colnames(df1) <- names(interactome.cv.go_bp.offsp.IDs)
+df1[1,] <- sapply(names(interactome.cv.go_bp.offsp.IDs), function(x) xx[x][[1]]@Term)
+for (i in 1:length(interactome.cv.go_bp.offsp.IDs)) {
+  df1[1 : length(interactome.cv.go_bp.offsp.IDs[[i]]) + 1 , i] <- as.vector(unlist(interactome.cv.go_bp.offsp.IDs[i]))
+}
+
+# make a table with GO terms and associated gene IDs
+df1 <- data.frame(matrix(nrow = max(interactome.cv.go_cc.offsp) + 1, ncol = length(interactome.cv.go_cc.offsp)))
+colnames(df1) <- names(interactome.cv.go_cc.offsp.IDs)
+df1[1,] <- sapply(names(interactome.cv.go_cc.offsp.IDs), function(x) xx[x][[1]]@Term)
+for (i in 1:length(interactome.cv.go_cc.offsp.IDs)) {
+  df1[1 : length(interactome.cv.go_cc.offsp.IDs[[i]]) + 1 , i] <- as.vector(unlist(interactome.cv.go_cc.offsp.IDs[i]))
+}
+write.csv(df1, file = "/Users/u1001407/Dropbox/REM project-Sebastian/Interactome_cardiovascular_associated_GO_CC_gene_ensembl_IDs_table.csv")
 
 
 
