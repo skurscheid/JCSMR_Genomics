@@ -706,12 +706,8 @@ entrez_ids <- entrez_ids[-which(duplicated(entrez_ids$ensembl_gene_id)),]
 interactome.rbp <- merge(interactome.rbp, entrez_ids, by.x = "ensembl_gene_id", by.y = "ensembl_gene_id", all.x = T)
 interactome.rbp.entrezIDs <- unique(interactome.rbp[!is.na(interactome.rbp$entrezgene),]$entrezgene)
 interactome.rbp.keggIDs <- keggConv.batch(interactome.rbp.entrezIDs)
-interactome.rbp.keggQ <- lapply(interactome.rbp.keggIDs, function(x) keggGet(x))
-interactome.rbp.pathways <- unique(unlist(lapply(strsplit(names(unlist(lapply(interactome.rbp.keggQ, function(x) x[[1]]$"PATHWAY"))), "\\."), function(x) x[3])))
-interactome.rbp.pathways.genes <- lapply(interactome.rbp.pathways, function(x) keggLink("genes", x))
-names(interactome.rbp.pathways.genes) <- interactome.rbp.pathways
-interactome.rbp.pathways.genes.entrez_ids <- unique(gsub("mmu:", "", as.character(unlist(interactome.rbp.pathways.genes))))
-interactome.rbp.df <- kegg.brite[gsub("mmu", "", interactome.rbp.pathways), ]
+
+interactome.rbp.df <- interactome.df
 interactome.rbp.df$source <- rep("GO_RNA_unrelated", nrow(interactome.rbp.df))
 interactome.rbp.df$ID <- rownames(interactome.rbp.df)
 interactome.rbp.df$total <- rep(0, nrow(interactome.rbp.df))
@@ -824,12 +820,8 @@ entrez_ids <- entrez_ids[-which(duplicated(entrez_ids$ensembl_gene_id)),]
 interactome.canonical.rbp <- merge(interactome.canonical.rbp, entrez_ids, by.x = "ensembl_gene_id", by.y = "ensembl_gene_id", all.x = T)
 interactome.canonical.rbp.entrezIDs <- unique(interactome.canonical.rbp[!is.na(interactome.canonical.rbp$entrezgene),]$entrezgene)
 interactome.canonical.rbp.keggIDs <- keggConv.batch(interactome.canonical.rbp.entrezIDs)
-interactome.canonical.rbp.keggQ <- lapply(interactome.canonical.rbp.keggIDs, function(x) keggGet(x))
-interactome.canonical.rbp.pathways <- unique(unlist(lapply(strsplit(names(unlist(lapply(interactome.canonical.rbp.keggQ, function(x) x[[1]]$"PATHWAY"))), "\\."), function(x) x[3])))
-interactome.canonical.rbp.pathways.genes <- lapply(interactome.canonical.rbp.pathways, function(x) keggLink("genes", x))
-names(interactome.canonical.rbp.pathways.genes) <- interactome.canonical.rbp.pathways
-interactome.canonical.rbp.pathways.genes.entrez_ids <- unique(gsub("mmu:", "", as.character(unlist(interactome.canonical.rbp.pathways.genes))))
-interactome.canonical.rbp.df <- kegg.brite[gsub("mmu", "", interactome.canonical.rbp.pathways), ]
+
+interactome.canonical.rbp.df <- interactome.df
 # we are now using WCL as background to test for enrichment
 i1 <- intersect(rownames(interactome.canonical.rbp.df), rownames(wcl.df))
 interactome.canonical.rbp.df$total <- rep(0, nrow(interactome.canonical.rbp.df))
@@ -945,12 +937,8 @@ entrez_ids <- entrez_ids[-which(duplicated(entrez_ids$ensembl_gene_id)),]
 interactome.unrecognized.rbp <- merge(interactome.unrecognized.rbp, entrez_ids, by.x = "ensembl_gene_id", by.y = "ensembl_gene_id", all.x = T)
 interactome.unrecognized.rbp.entrezIDs <- unique(interactome.unrecognized.rbp[!is.na(interactome.unrecognized.rbp$entrezgene),]$entrezgene)
 interactome.unrecognized.rbp.keggIDs <- keggConv.batch(interactome.unrecognized.rbp.entrezIDs)
-interactome.unrecognized.rbp.keggQ <- lapply(interactome.unrecognized.rbp.keggIDs, function(x) keggGet(x))
-interactome.unrecognized.rbp.pathways <- unique(unlist(lapply(strsplit(names(unlist(lapply(interactome.unrecognized.rbp.keggQ, function(x) x[[1]]$"PATHWAY"))), "\\."), function(x) x[3])))
-interactome.unrecognized.rbp.pathways.genes <- lapply(interactome.unrecognized.rbp.pathways, function(x) keggLink("genes", x))
-names(interactome.unrecognized.rbp.pathways.genes) <- interactome.unrecognized.rbp.pathways
-interactome.unrecognized.rbp.pathways.genes.entrez_ids <- unique(gsub("mmu:", "", as.character(unlist(interactome.unrecognized.rbp.pathways.genes))))
-interactome.unrecognized.rbp.df <- kegg.brite[gsub("mmu", "", interactome.unrecognized.rbp.pathways), ]
+
+interactome.unrecognized.rbp.df <- interactome.df
 # we are now using WCL as background to test for enrichment
 i1 <- intersect(rownames(interactome.unrecognized.rbp.df), rownames(wcl.df))
 interactome.unrecognized.rbp.df$total <- rep(0, nrow(interactome.unrecognized.rbp.df))
@@ -1028,12 +1016,9 @@ entrez_ids <- entrez_ids[-which(duplicated(entrez_ids$ensembl_gene_id)),]
 interactome.recognized.rbp <- merge(interactome.recognized.rbp, entrez_ids, by.x = "ensembl_gene_id", by.y = "ensembl_gene_id", all.x = T)
 interactome.recognized.rbp.entrezIDs <- unique(interactome.recognized.rbp[!is.na(interactome.recognized.rbp$entrezgene),]$entrezgene)
 interactome.recognized.rbp.keggIDs <- keggConv.batch(interactome.recognized.rbp.entrezIDs)
-interactome.recognized.rbp.keggQ <- lapply(interactome.recognized.rbp.keggIDs, function(x) keggGet(x))
-interactome.recognized.rbp.pathways <- unique(unlist(lapply(strsplit(names(unlist(lapply(interactome.recognized.rbp.keggQ, function(x) x[[1]]$"PATHWAY"))), "\\."), function(x) x[3])))
-interactome.recognized.rbp.pathways.genes <- lapply(interactome.recognized.rbp.pathways, function(x) keggLink("genes", x))
-names(interactome.recognized.rbp.pathways.genes) <- interactome.recognized.rbp.pathways
-interactome.recognized.rbp.pathways.genes.entrez_ids <- unique(gsub("mmu:", "", as.character(unlist(interactome.recognized.rbp.pathways.genes))))
-interactome.recognized.rbp.df <- kegg.brite[gsub("mmu", "", interactome.recognized.rbp.pathways), ]
+
+# to test for every pathway that has been found in the interactome dataset we use that data to test against
+interactome.recognized.rbp.df <- interactome.df
 # we are now using WCL as background to test for enrichment
 i1 <- intersect(rownames(interactome.recognized.rbp.df), rownames(wcl.df))
 interactome.recognized.rbp.df$total <- rep(0, nrow(interactome.recognized.rbp.df))

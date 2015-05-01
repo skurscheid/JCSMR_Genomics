@@ -12,8 +12,10 @@ attribs.hsap <- listAttributes(human)
 
 # load IDs
 cv.assoc.proteins <- read.xls("/Volumes/MHS//workgroups/jcsmr//PreissLab/Sebastian Kurscheid/Annotations//GO/cardiovascular_associated_proteins.xlsx", sheet = 1, header = T, as.is = T)
-interactome <- read.xls("/Users/u1001407/Dropbox/REM project-Sebastian/HL-1 interactome superset.xlsx", sheet = "Sheet1" , as.is = T)
+interactome <- read.xls("/Users/u1001407/Dropbox/REM project-Sebastian/HL-1 interactome superset.xlsx", sheet = "sheet 1" , as.is = T)
+wcl <- read.xls("/Users/u1001407/Dropbox/REM project-Sebastian/HL-1 interactome superset.xlsx", sheet = "WCL GO RNAbind" , as.is = T)
 colnames(interactome)[c(1,2)] <- c("ensembl_gene_id", "gene_symbol")
+colnames(wcl)[c(1,2)] <- c("ensembl_gene_id", "gene_symbol", "GO Term", "RBD type")
 
 # biomaRt attribute uniprot_swissprot
 mmus.cv.assoc <- getBM(attributes = c("ensembl_gene_id", "uniprot_swissprot"), filters = "uniprot_swissprot", values = cv.assoc.proteins[which(cv.assoc.proteins$Taxon == "10090"), "ID"], mart = mouse)
