@@ -1088,10 +1088,27 @@ df1 <- rbind(interactome.B.df[, c("A", "B", "ft_OR", "ft_fdr", "source")],
 df1$source <- as.factor(df1$source)
 df1$source <- factor(df1$source, levels = levels(df1$source)[c(3,1,2,4,5)])
 
-p3 <- ggplot(df1, aes(source, B)) + geom_tile(aes(fill = log2(ft_OR)))
+df1$B <- as.factor(df1$B)
+df1$B <- factor(df1$B, levels = levels(df1$B)[h1$rowInd])
+
+p3 <- ggplot(df1, aes(B, source)) + geom_tile(aes(fill = log2(df1$ft_OR)))
 p3 <- p3 + theme(axis.text.x = element_text(angle = 90))
 p3 <- p3 + scale_fill_gradientn(colours= c("red", "green"))
-p3
+p3 + facet_grid(A ~ B)
+
+# subsetting for FDR <= 0.05
+c1 <- as.character(df1[df1$source == "Interactome",][which(df1[df1$source == "Interactome",]$ft_fdr <= 0.05),]$B)
+df2 <- df1[which(df1$B %in% c1),]
+
+# subsetting Metabolism and Genetic Information Processing
+df.metab <- df1[df1$A == "Metabolism",]
+df.gip <- df1[df1$A == "Genetic information Processin",]
+df3 <- rbind(df.metab[which(df.metab$ft_fdr <= 0.1),], df.gip[df.gip$ft_fdr <= 0.05,])
+df3 <- rbind(df.metab, df.gip)
+p4 <- ggplot(df3, aes(source, B)) + geom_tile(aes(fill = log2(df3$ft_OR)))
+p4 <- p4 + theme(axis.text.x = element_text(angle = 90))
+p4 <- p4 + scale_fill_gradientn(colours= rainbow(3), na.value = "darkgrey")
+p4
 
 # preparing matrix for clustering
 m1[df1[which(df1$source == "Interactome"),]$B, 1] <- df1[which(df1$source == "Interactome"),]$ft_OR
