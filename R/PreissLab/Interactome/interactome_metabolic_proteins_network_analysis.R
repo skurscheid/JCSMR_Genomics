@@ -713,7 +713,9 @@ interactome.rbp.df$ID <- rownames(interactome.rbp.df)
 interactome.rbp.df$total <- rep(0, nrow(interactome.rbp.df))
 # we are now using WCL as background to test for enrichment
 i1 <- intersect(rownames(interactome.rbp.df), rownames(wcl.df))
-interactome.rbp.df[i1,]$total <- wcl.df[i1,]$count
+# 2015-05-4 change background to interactome, seems more appropriate
+i1 <- intersect(rownames(interactome.rbp.df), rownames(interactome.df))
+interactome.rbp.df[i1,]$total <- interactome.df[i1,]$count
 interactome.rbp.df$count <- rep(0, nrow(interactome.rbp.df))
 interactome.rbp.df$frac <- rep(0, nrow(interactome.rbp.df))
 
@@ -727,7 +729,7 @@ for (i in rownames(interactome.rbp.df)) {
 interactome.rbp.df$hyper_depleted <- rep(0.0, nrow(interactome.rbp.df))
 interactome.rbp.df$hyper_enriched <- rep(0.0, nrow(interactome.rbp.df))
 
-bkgd <- length(unique(wcl.keggIDs))
+bkgd <- length(unique(interactome.keggIDs))
 smpl <- length(interactome.rbp.keggIDs)
 interactome.rbp.df$hyper_depleted <- phyper(interactome.rbp.df$count - 1, interactome.rbp.df$total, bkgd - interactome.rbp.df$total, smpl, lower.tail = T)
 interactome.rbp.df$hyper_enriched <- phyper(interactome.rbp.df$count - 1, interactome.rbp.df$total, bkgd - interactome.rbp.df$total, smpl, lower.tail = F)
@@ -735,7 +737,7 @@ interactome.rbp.df$hyper_depleted_fdr <- p.adjust(interactome.rbp.df$hyper_deple
 interactome.rbp.df$hyper_enriched_fdr <- p.adjust(interactome.rbp.df$hyper_enriched, method = "fdr")
 
 # perform Fisher's Exact Test for each category
-bkgd <- length(unique(wcl.keggIDs))
+bkgd <- length(unique(interactome.keggIDs))
 smpl <- length(interactome.rbp.keggIDs)
 ftl <- apply(interactome.rbp.df, 1, function (x) {
   ct <- as.integer(x["count"])
@@ -755,7 +757,8 @@ interactome.rbp.B.df$source <- rep("GO_RNA_unrelated", nrow(interactome.rbp.B.df
 interactome.rbp.B.df$total <- sapply(unique(interactome.rbp.df$B), function(x) {tot <- sum(interactome.rbp.df[which(interactome.rbp.df$B %in% x), "total"])})
 interactome.rbp.B.df$count <- sapply(unique(interactome.rbp.df$B), function(x) {count <- sum(interactome.rbp.df[which(interactome.rbp.df$B %in% x), "count"])})
 
-bkgd <- length(unique(wcl.keggIDs))
+# using interactome as background
+bkgd <- length(unique(interactome.keggIDs))
 smpl <- length(interactome.rbp.keggIDs)
 ftl <- apply(interactome.rbp.B.df, 1, function (x) {
   ct <- as.integer(x["count"])
@@ -766,31 +769,12 @@ interactome.rbp.B.df$ft_pval <- unlist(lapply(ftl, function(x) {x$p.value}))
 interactome.rbp.B.df$ft_OR <- unlist(lapply(ftl, function(x) {x$estimate}))
 interactome.rbp.B.df$ft_fdr <- p.adjust(interactome.rbp.B.df$ft_pval, method = "fdr")
 
-# plotting
-map.marketV2(id = interactome.rbp.df$ID,
-             area = interactome.rbp.df$count,
-             group = interactome.rbp.df$B,
-             color = log(interactome.rbp.df$ft_OR),
-             main = "interactome.rbp proteome\nKEGG pathway enrichment/depletion",
-             lab = c(TRUE, FALSE))
-
-# rectangular tree map of top level KEGG categories
-pdf("/Users/u1001407/Dropbox//REM project-Sebastian/KEGG Analysis Figures/KEGG_toplevel_interactome.rbp.pdf", width = 15, height = 10)
-map.marketV2(id = interactome.rbp.df$ID,
-             area = interactome.rbp.df$total,
-             group = interactome.rbp.df$A,
-             color = log2(interactome.rbp.df$ft_OR),
-             main = "interactome.rbp proteome\nKEGG pathway enrichment/depletion",
-             lab = c(TRUE, FALSE))
-dev.off()
-
 # OMIM analysis
 # first, get human homologs of mouse interactome genes
 interactome.rbp.human_homologs <- getBM(attributes = c("ensembl_gene_id","hsapiens_homolog_ensembl_gene"), values = interactome.rbp[,"ensembl_gene_id"], filters = "ensembl_gene_id", mart = mouse)
 interactome.rbp.human_homologs.mim <- getBM(attributes = c("ensembl_gene_id", "mim_morbid_accession", "mim_gene_accession"), values = interactome.rbp.human_homologs[,"hsapiens_homolog_ensembl_gene"], filters = "ensembl_gene_id", mart = human)
 
 # testing for enrichment of OMIM genes/terms in the interactome.rbp proteome
-
 bkgd <- 14874 # total number of genes in OMIM DB
 smpl <- length(unique(interactome.rbp.human_homologs.mim$mim_gene_accession)) # number of genes in interactome.rbp list with OMIM gene ID
 tt <- 4404 # total number of OMIM terms, i.e. bkgd has #tt 
@@ -822,8 +806,8 @@ interactome.canonical.rbp.entrezIDs <- unique(interactome.canonical.rbp[!is.na(i
 interactome.canonical.rbp.keggIDs <- keggConv.batch(interactome.canonical.rbp.entrezIDs)
 
 interactome.canonical.rbp.df <- interactome.df
-# we are now using WCL as background to test for enrichment
-i1 <- intersect(rownames(interactome.canonical.rbp.df), rownames(wcl.df))
+# we are now using interactome as background to test for enrichment
+i1 <- intersect(rownames(interactome.canonical.rbp.df), rownames(interactome.df))
 interactome.canonical.rbp.df$total <- rep(0, nrow(interactome.canonical.rbp.df))
 interactome.canonical.rbp.df[i1,]$total <- wcl.df[i1,]$count
 interactome.canonical.rbp.df$source <- rep("GO_RNA_related", nrow(interactome.canonical.rbp.df))
@@ -841,7 +825,7 @@ for (i in rownames(interactome.canonical.rbp.df)) {
 interactome.canonical.rbp.df$hyper_depleted <- rep(0.0, nrow(interactome.canonical.rbp.df))
 interactome.canonical.rbp.df$hyper_enriched <- rep(0.0, nrow(interactome.canonical.rbp.df))
 
-bkgd <- length(unique(wcl.keggIDs))
+bkgd <- length(unique(interactome.keggIDs))
 smpl <- length(interactome.canonical.rbp.keggIDs)
 interactome.canonical.rbp.df$hyper_depleted <- phyper(interactome.canonical.rbp.df$count - 1, interactome.canonical.rbp.df$total, bkgd - interactome.canonical.rbp.df$total, smpl, lower.tail = T)
 interactome.canonical.rbp.df$hyper_enriched <- phyper(interactome.canonical.rbp.df$count - 1, interactome.canonical.rbp.df$total, bkgd - interactome.canonical.rbp.df$total, smpl, lower.tail = F)
@@ -849,9 +833,9 @@ interactome.canonical.rbp.df$hyper_depleted_fdr <- p.adjust(interactome.canonica
 interactome.canonical.rbp.df$hyper_enriched_fdr <- p.adjust(interactome.canonical.rbp.df$hyper_enriched, method = "fdr")
 
 # perform Fisher's Exact Test for each category
-bkgd <- length(unique(wcl.keggIDs))
+bkgd <- length(unique(interactome.keggIDs))
 smpl <- length(interactome.canonical.rbp.keggIDs)
-ftl <- apply(interactome.canonical.rbp.df, 1, function (x) {
+ftl <- apply(interactome.canonical.rbp.df[5,], 1, function (x) {
   ct <- as.integer(x["count"])
   tt <- as.integer(x["total"])
   fisher.test(matrix(c(ct, tt - ct, smpl - ct, bkgd - tt - smpl + ct), 2, 2), alternative = "two.sided")
@@ -869,7 +853,7 @@ interactome.canonical.rbp.B.df$source <- rep("GO_RNA_related", nrow(interactome.
 interactome.canonical.rbp.B.df$total <- sapply(unique(interactome.canonical.rbp.df$B), function(x) {tot <- sum(interactome.canonical.rbp.df[which(interactome.canonical.rbp.df$B %in% x), "total"])})
 interactome.canonical.rbp.B.df$count <- sapply(unique(interactome.canonical.rbp.df$B), function(x) {count <- sum(interactome.canonical.rbp.df[which(interactome.canonical.rbp.df$B %in% x), "count"])})
 
-bkgd <- length(unique(wcl.keggIDs))
+bkgd <- length(unique(interactome.keggIDs))
 smpl <- length(interactome.canonical.rbp.keggIDs)
 ftl <- apply(interactome.canonical.rbp.B.df, 1, function (x) {
   ct <- as.integer(x["count"])
@@ -879,23 +863,6 @@ ftl <- apply(interactome.canonical.rbp.B.df, 1, function (x) {
 interactome.canonical.rbp.B.df$ft_pval <- unlist(lapply(ftl, function(x) {x$p.value}))
 interactome.canonical.rbp.B.df$ft_OR <- unlist(lapply(ftl, function(x) {x$estimate}))
 interactome.canonical.rbp.B.df$ft_fdr <- p.adjust(interactome.canonical.rbp.B.df$ft_pval, method = "fdr")
-
-map.marketV2(id = interactome.canonical.rbp.df$ID,
-             area = interactome.canonical.rbp.df$count,
-             group = interactome.canonical.rbp.df$B,
-             color = log(interactome.canonical.rbp.df$ft_OR),
-             main = "interactome.canonical.rbp proteome\nKEGG pathway enrichment/depletion",
-             lab = c(TRUE, FALSE))
-
-# rectangular tree map of top level KEGG categories
-pdf("/Users/u1001407/Dropbox//REM project-Sebastian/KEGG Analysis Figures/KEGG_toplevel_interactome.canonical.rbp.pdf", width = 15, height = 10)
-map.marketV2(id = interactome.canonical.rbp.df$ID,
-             area = interactome.canonical.rbp.df$total,
-             group = interactome.canonical.rbp.df$A,
-             color = log2(interactome.canonical.rbp.df$ft_OR),
-             main = "interactome.canonical.rbp proteome\nKEGG pathway enrichment/depletion",
-             lab = c(TRUE, FALSE))
-dev.off()
 
 # OMIM analysis
 # first, get human homologs of mouse interactome genes
@@ -1239,3 +1206,38 @@ map.marketV2(id = df1[which(!df1$class == "Global and overview maps"),]$V1,
            color = log2(df1[which(!df1$class == "Global and overview maps"),]$frac + 1),
            main = "Cellular pathway",
            lab = c(TRUE, FALSE))
+
+# plotting
+map.marketV2(id = interactome.rbp.df$ID,
+             area = interactome.rbp.df$count,
+             group = interactome.rbp.df$B,
+             color = log(interactome.rbp.df$ft_OR),
+             main = "interactome.rbp proteome\nKEGG pathway enrichment/depletion",
+             lab = c(TRUE, FALSE))
+
+# rectangular tree map of top level KEGG categories
+pdf("/Users/u1001407/Dropbox//REM project-Sebastian/KEGG Analysis Figures/KEGG_toplevel_interactome.rbp.pdf", width = 15, height = 10)
+map.marketV2(id = interactome.rbp.df$ID,
+             area = interactome.rbp.df$total,
+             group = interactome.rbp.df$A,
+             color = log2(interactome.rbp.df$ft_OR),
+             main = "interactome.rbp proteome\nKEGG pathway enrichment/depletion",
+             lab = c(TRUE, FALSE))
+dev.off()
+
+map.marketV2(id = interactome.canonical.rbp.df$ID,
+             area = interactome.canonical.rbp.df$count,
+             group = interactome.canonical.rbp.df$B,
+             color = log(interactome.canonical.rbp.df$ft_OR),
+             main = "interactome.canonical.rbp proteome\nKEGG pathway enrichment/depletion",
+             lab = c(TRUE, FALSE))
+
+# rectangular tree map of top level KEGG categories
+pdf("/Users/u1001407/Dropbox//REM project-Sebastian/KEGG Analysis Figures/KEGG_toplevel_interactome.canonical.rbp.pdf", width = 15, height = 10)
+map.marketV2(id = interactome.canonical.rbp.df$ID,
+             area = interactome.canonical.rbp.df$total,
+             group = interactome.canonical.rbp.df$A,
+             color = log2(interactome.canonical.rbp.df$ft_OR),
+             main = "interactome.canonical.rbp proteome\nKEGG pathway enrichment/depletion",
+             lab = c(TRUE, FALSE))
+dev.off()
