@@ -17,7 +17,7 @@
 #  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
 #  MA 02110-1301, USA.
 #  
-# load libraries
+#------load libraries------
 library("biomaRt")
 library("GO.db")
 library("GenomicFeatures")
@@ -30,29 +30,39 @@ library("metagene")
 library("GenomicRanges")
 library("RSQLite")
 library("biovizBase")
+library("Rsamtools")
 
-# environment
-setwd("/home/skurscheid/Data/Tremethick/LINE_1_project/")
+#------environment------
+host <- system("hostname", intern = T)
+if (host %in% c("mmlab4.anu.edu.au")) {
+  root <- "/Volumes/gduserv"
+} else {
+  root <- "/home/skurscheid"
+}
 
-# some variables
+setwd(paste(root, "/Data/Tremethick/LINE_1_project/", sep = ""))
+
+#------some variables------
 canonicalChr <- c(seq(1,19), "X", "Y", "M")
 
-# load annotation data
+#------load annotation data------
 repeatMasker <- read.table("~/Data/Annotations/GRCm38_mm10/repeatMaskerMM10.txt", header = T, as.is = T, sep = "\t")
+repeatMasker$genoName <- gsub("chr", "", repeatMasker$genoName)
 gr.repeatMasker <- GRanges(seqnames = repeatMasker$genoName, IRanges(start = repeatMasker$genoStart, end = repeatMasker$genoEnd), strand = repeatMasker$strand, mcols = repeatMasker[,c("repName", "repClass", "repFamily", "repStart", "repEnd", "repLeft")])
-# subset LINE1 elements
-gr.repeatMasker.LINE1 <- gr.repeatMasker[which(gr.repeatMasker$mcols.repClass == "LINE")]
+
+#------subset LINE1 elements
+gr.repeatMasker.LINE1 <- gr.repeatMasker[which(gr.repeatMasker$mcols.repFamily == "L1")]
 seqlevels(gr.repeatMasker.LINE1, force = T) <- canonicalChr
 gr.repeatMasker.LINE1 <- sort(gr.repeatMasker.LINE1)
 
-# load Ensembl TxDB
-mm10Ensembl <- loadDb("/home/skurscheid/Data/Annotations/GRCm38_mm10/mmusculus_gene_ensembl_GRCm38_TxDB.sqlite")
-# extract gene annotation
+#------load Ensembl TxDB------
+mm10Ensembl <- loadDb(paste(root, "/Data/Annotations/GRCm38_mm10/mmusculus_gene_ensembl_GRCm38_TxDB.sqlite", sep = ""))
+#------extract gene annotation
 gr.genes <- genes(mm10Ensembl)
 seqlevels(gr.genes, force = TRUE) <- canonicalChr
 gr.genes <- sort(gr.genes)
 
-# import BAM files for visualization and quantitative analysis
+#------import BAM files for visualization and quantitative analysis------------
 # run picard MarkDuplicates prior to import to remove PCR duplicates
 ga.dt_input <- import("DT_Input.sorted.rmdup.bam")
 ga.dt_h2az <- import("DT_H2A.Z.sorted.rmdup.bam")
@@ -91,9 +101,7 @@ cov.g1_h2az <- coverage(gr.g1_h2az)
 cov.s_input <- coverage(gr.s_input)
 cov.s_h2az <- coverage(gr.s_h2az)
 
-
-#---------------------------------------------------------
-# results of using the peakranger "ranger" function (for narrow peaks)
+#------results of using the peakranger "ranger" function (for narrow peaks)---------------------------------------------------
 dat.peakranger_narrow <- data.frame(wd = rep("/home/skurscheid/Data/Tremethick/LINE_1_project/peakranger_analysis/", 6), 
                                     cell = c("DT", "DT", "G1", "G1", "S", "S"), 
                                     mark = rep(c("H2AZ", "H3K4me3"), 3), 
@@ -122,13 +130,13 @@ grl.peakranger_narrow <- lapply(grl.peakranger_narrow, sort)
 grl.peakranger_narrow <- GRangesList(grl.peakranger_narrow)
 names(grl.peakranger_narrow) <- apply(dat.peakranger_narrow, 1, function(x) paste(x["cell"], x["mark"], sep = "_"))
 
-#---------------------------------------------------------
-# results of "arem" analysis (for narrow peaks)
+#------results of "arem" analysis (for narrow peaks)---------------------------------------------------
 dat.arem_narrow <- data.frame(wd = rep("/home/skurscheid/Data/Tremethick/LINE_1_project/arem_analysis/", 3), 
                                     cell = c("DT", "G1", "S"), 
                                     mark = rep(c("H2AZ"), 3), 
                                     peak = rep("peaks", 3))
 
+# use the XLS file as input, as statistics are only available here (FC, p-values, etc)
 grl.arem_narrow <- apply(dat.arem_narrow, 1, function(x) {
   f <- paste(x["wd"], "/", 
              x["cell"], "_", 
@@ -137,23 +145,61 @@ grl.arem_narrow <- apply(dat.arem_narrow, 1, function(x) {
              x["mark"], "_", 
              "arem", "_",
              x["peak"], 
-             ".bed", 
+             ".xls", 
              sep = "")
   if (file.exists(f) == TRUE){
-    gr <- import(f)
+    tab1 <- read.table(f, skip = 23, header = T, as.is = T, sep = "\t")
+    gr <- GRanges(seqnames = tab1$chr, IRanges(start = tab1$start, end = tab1$end), strand = "*", mcols = tab1[, c("summit", "tags", "X.10.log10.pvalue.", "fold_enrichment", "FDR...")])
     seqlevels(gr, force = TRUE) <- canonicalChr
   }
   return(gr)
 })
 
-
 grl.arem_narrow <- lapply(grl.arem_narrow, unstrand)
 grl.arem_narrow <- lapply(grl.arem_narrow, sort)
 grl.arem_narrow <- GRangesList(grl.arem_narrow)
-names(grl.arem_narrow) <- apply(grl.arem_narrow, 1, function(x) paste(x["cell"], x["mark"], sep = "_"))
+names(grl.arem_narrow) <- apply(dat.arem_narrow, 1, function(x) paste(x["cell"], x["mark"], sep = "_"))
 
-#--------------------------------------------------------------------------
-# comparison between MACS2 and PeakRanger
+# counting peaks intersecting with different L1 elements
+dat.arem_narrow$L1_peaks <- rep(0,3)
+dat.arem_narrow$L1Md_A_peaks <- rep(0,3)
+dat.arem_narrow$L1_peaks <- sapply(names(grl.arem_narrow), function(x) length(subsetByOverlaps(grl.arem_narrow[[x]], gr.repeatMasker.LINE1)))
+dat.arem_narrow$L1Md_A_peaks <- sapply(names(grl.arem_narrow), function(x) length(subsetByOverlaps(grl.arem_narrow[[x]], gr.repeatMasker.LINE1[grep("Md", gr.repeatMasker.LINE1$mcols.repName)])))
+
+pdf("H2AZ_LINE1_L1Md_A_peak_counts.pdf", paper = "a4r")
+ggplot(dat.arem_narrow, aes(cell, L1Md_A_peaks)) + geom_bar(stat = "identity") + ggtitle("H2AZ peaks at L1Md_A elements")
+dev.off()
+
+pdf("H2AZ_LINE1_L1_peak_counts.pdf", paper = "a4r")
+ggplot(dat.arem_narrow, aes(cell, L1_peaks)) + geom_bar(stat = "identity") + ggtitle("H2AZ peaks at L1 elements")
+dev.off()
+
+# make histograms of fold-enrichment for all three groups - here all L1 elements
+df1 <- data.frame(FE = subsetByOverlaps(grl.arem_narrow[[1]], gr.repeatMasker.LINE1)$mcols.fold_enrichment, source = rep("DT_H2AZ", length(subsetByOverlaps(grl.arem_narrow[[1]], gr.repeatMasker.LINE1))))
+df1 <- rbind(df1, data.frame(FE = subsetByOverlaps(grl.arem_narrow[[2]], gr.repeatMasker.LINE1)$mcols.fold_enrichment, source = rep("G1_H2AZ", length(subsetByOverlaps(grl.arem_narrow[[2]], gr.repeatMasker.LINE1)))))
+df1 <- rbind(df1, data.frame(FE = subsetByOverlaps(grl.arem_narrow[[3]], gr.repeatMasker.LINE1)$mcols.fold_enrichment, source = rep("S_H2AZ", length(subsetByOverlaps(grl.arem_narrow[[3]], gr.repeatMasker.LINE1)))))
+df1$source <- factor(df1$source, levels(df1$source)[c(2,3,1)])
+
+# histogram of fold enrichment at LINE1 element sites overlapping with H2AZ
+pdf("H2AZ_L1_FE_histogram.pdf", paper = "a4r")
+ggplot(df1, aes(x=FE, fill=source)) + geom_density(alpha=.3)+ ggtitle("Histogram of fold-enrichment at L1 associated H2AZ peaks")
+dev.off()
+
+# make histograms of fold-enrichment for all three groups - here only L1Md_A elements
+gr1 <- gr.repeatMasker.LINE1[grep("Md", gr.repeatMasker.LINE1$mcols.repName)]
+df2 <- data.frame(FE = subsetByOverlaps(grl.arem_narrow[[1]], gr1)$mcols.fold_enrichment, source = rep("DT_H2AZ", length(subsetByOverlaps(grl.arem_narrow[[1]], gr1))))
+df2 <- rbind(df2, data.frame(FE = subsetByOverlaps(grl.arem_narrow[[2]], gr1)$mcols.fold_enrichment, source = rep("G1_H2AZ", length(subsetByOverlaps(grl.arem_narrow[[2]], gr1)))))
+df2 <- rbind(df2, data.frame(FE = subsetByOverlaps(grl.arem_narrow[[3]], gr1)$mcols.fold_enrichment, source = rep("S_H2AZ", length(subsetByOverlaps(grl.arem_narrow[[3]], gr1)))))
+df2$source <- factor(df2$source, levels(df2$source)[c(2,3,1)])
+
+# histogram of fold enrichment at L1Md_A element sites overlapping with H2AZ
+pdf("H2AZ_L1Md_A_FE_histogram.pdf", paper = "a4r")
+ggplot(df2, aes(x=FE, fill=source)) + geom_density(alpha=.3) + ggtitle("Histogram of fold-enrichment at L1Md_A associated H2AZ peaks")
+dev.off()
+
+
+#------comparison between MACS2 and PeakRanger--------------------------------------------------------------------
+# 
 # G1 cells, H2A.Z, S cells
 dat.macs2 <- data.frame(wd = as.character(rep("/home/skurscheid/Data/Tremethick/LINE_1_project/macs2_analysis/", 6)),
                         cell = c("DT", "DT", "G1", "G1", "S", "S"),
@@ -206,9 +252,8 @@ grl.consensus.h2az.LINE1 <- resize(grl.consensus.h2az.LINE1, 1000, fix = "center
 grl.consensus.h2az.LINE1 <- GRangesList(lapply(grl.consensus.h2az.LINE1, trim))
 grl.consensus.h2az.LINE1 <- GRangesList(lapply(grl.consensus.h2az.LINE1, sort))
 
-#----------------------------------------------------
-# for DT data
-#----------------------------------------------------
+#------DT data----------------------------------------------
+
 grl.dt.h2az.LINE1 <- GRangesList(lapply(canonicalChr, function(x) grl.consensus.h2az.LINE1$"DT_H2AZ"[which(seqnames(grl.consensus.h2az.LINE1$"DT_H2AZ") == x)]))
 irl.dt.h2az.LINE1 <- as(grl.dt.h2az.LINE1, "IRangesList")
 vw.dt.h2az.LINE1 <- Views(cov.dt_h2az, irl.dt.h2az.LINE1)
@@ -253,10 +298,7 @@ plot(-499:500, apply(df.dt.input.LINE1, 1, mean), type = "l")
 lines(lowess(apply(df.dt.input.LINE1[1:225], 1, mean) ~ -499:500),col="green3")
 dev.off()
 
-#----------------------------------------------------
-# for G1 data
-#----------------------------------------------------
-
+#------G1 data----------------------------------------------
 grl.g1.h2az.LINE1 <- GRangesList(lapply(canonicalChr, function(x) grl.consensus.h2az.LINE1$"G1_H2AZ"[which(seqnames(grl.consensus.h2az.LINE1$"G1_H2AZ") == x)]))
 irl.g1.h2az.LINE1 <- as(grl.g1.h2az.LINE1, "IRangesList")
 vw.g1.h2az.LINE1 <- Views(cov.g1_h2az, irl.g1.h2az.LINE1)
@@ -301,10 +343,7 @@ plot(-499:500, apply(df.g1.input.LINE1, 1, mean), type = "l")
 lines(lowess(apply(df.g1.input.LINE1, 1, mean) ~ -499:500),col="green3")
 dev.off()
 
-#----------------------------------------------------
-# for S phase data
-#----------------------------------------------------
-
+#------for S phase data----------------------------------------------
 grl.s.h2az.LINE1 <- GRangesList(lapply(canonicalChr, function(x) grl.consensus.h2az.LINE1$"S_H2AZ"[which(seqnames(grl.consensus.h2az.LINE1$"S_H2AZ") == x)]))
 irl.s.h2az.LINE1 <- as(grl.s.h2az.LINE1, "IRangesList")
 vw.s.h2az.LINE1 <- Views(cov.s_h2az, irl.s.h2az.LINE1)
