@@ -44,43 +44,41 @@ bam1 <- readGAlignmentsList(file1, param = param2)
 seqlevels(bam1, force = T) <- canonicalChr
 
 # retrieve multimapping reads
-mm.id <- unique(bam1[which(bam1@elementMetadata$flag %in% c(256, 272))]@elementMetadata$qname)
-bam1.mm <- bam1[which(bam1@elementMetadata$qname %in% mm.id)]
-
+bam1.mm <- bam1[which(width(bam1@partitioning) > 1)]
+#mm.id <- sapply(bam1.mm, function(x) unique(elementMetadata(x)$qname))
 
 # use snowfall for parallel execution
 library(snowfall)
-
 # initialize cluster
+ptm <- proc.time()
 sfInit(parallel = T, cpus = 48)
-sfExport("mm.id")
 sfExport("bam1.mm")
 sfExport("gr.repeatMasker")
 sfLibrary(GenomicRanges)
 sfLibrary(Rsamtools)
 
-
 # first step - determine which read maps to LINE1 elements only
-ptm <- proc.time()
-x1 <- sfLapply(mm.id[1:10], function(x) {
-  gr1 <- granges(bam1.mm[which(bam1.mm@elementMetadata$qname == x)])
-  #t1 <- as.data.frame(mcols(subsetByOverlaps(gr.repeatMasker, bam1.mm[which(bam1.mm@elementMetadata$qname == x)], ignore.strand = T)))[,c("mcols.repClass", "mcols.repFamily")]
-  t1 <- as.data.frame(mcols(subsetByOverlaps(gr.repeatMasker, gr1, ignore.strand = T)))[,c("mcols.repClass", "mcols.repFamily")]
+# second step - isolate alignments of those reads
+# third step - randomly choose one alignment
+x1 <- sfLapply(bam1.mm, function(x) {
+  t1 <- as.data.frame(mcols(subsetByOverlaps(gr.repeatMasker, x, ignore.strand = T)))[,c("mcols.repClass", "mcols.repFamily")]
   if (length(unique(t1$mcols.repClass)) == 1) {
     REclass <- unique(t1$mcols.repClass)
     if (REclass == "LINE") {
+      x <- sample(x, 1)
       return(x)
     }
   }
 })
+
+# retain only list elements which are not null
+x.select <- sfLapply(x1, function(x) !is.null(x))
+x1 <- x1[unlist(x.select)]
+
 proc.time() - ptm
 
 # stopping the cluster
 sfStop()
-
-# second step - isolated alignments of those reads
-
-# third step - randomly choose one alignment
 
 # fourth step - write reduced multimapper file back (should it include uniquely aligned reads?)
 
