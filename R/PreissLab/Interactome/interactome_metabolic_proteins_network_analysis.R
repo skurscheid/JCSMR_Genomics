@@ -135,111 +135,6 @@ map.marketV2(id = wcl.df$ID,
              lab = c(TRUE, FALSE))
 dev.off()
 
-# OMIM analysis
-# first, get human homologs of mouse interactome genes
-wcl.human_homologs <- getBM(attributes = c("ensembl_gene_id","hsapiens_homolog_ensembl_gene"), values = wcl[,"ensembl_gene_id"], filters = "ensembl_gene_id", mart = mouse)
-wcl.human_homologs.mim <- getBM(attributes = c("ensembl_gene_id", "mim_morbid_accession", "mim_gene_accession"), values = wcl.human_homologs[,"hsapiens_homolog_ensembl_gene"], filters = "ensembl_gene_id", mart = human)
-
-# testing for enrichment of OMIM genes/terms in the WCL proteome
-
-bkgd <- 14874 # total number of genes in OMIM DB
-smpl <- length(unique(wcl.human_homologs.mim$mim_gene_accession)) # number of genes in WCL list with OMIM gene ID
-tt <- 4404 # total number of OMIM terms, i.e. bkgd has #tt 
-ct <- length(unique(wcl.human_homologs.mim$mim_morbid_accession)) # numer of genes in WCL list with OMIM term
-
-matrix(c(ct, tt - ct, smpl - ct, bkgd - tt - smpl + ct), 2, 2)
-fisher.test(matrix(c(ct, tt - ct, smpl - ct, bkgd - tt - smpl + ct), 2, 2), alternative = "two.sided")
-
-# how many genes have OMIM terms?
-# mouse
-length(unique(wcl.human_homologs[which(wcl.human_homologs$hsapiens_homolog_ensembl_gene %in% (unique(wcl.human_homologs.mim[which(!is.na(wcl.human_homologs.mim$mim_morbid_accession)),]$ensembl_gene_id))),]$ensembl_gene_id))
-# human
-length(unique(wcl.human_homologs.mim[which(!is.na(wcl.human_homologs.mim$mim_morbid_accession)),]$ensembl_gene_id))
-
-#-----------interactome mitochondrial proteins---------
-mitochondrial <- read.xls("/Users/u1001407/Dropbox/REM project-Sebastian/Mitochondria list 26March15.xlsx", sheet = 1, as.is = T)
-colnames(mitochondrial)[2] <- "ensembl_gene_id"
-entrez_ids <- getBM(attributes = c("ensembl_gene_id","entrezgene"), values = mitochondrial[,"ensembl_gene_id"], filters = "ensembl_gene_id", mart = mouse)
-mitochondrial.human_homologs <- getBM(attributes = c("ensembl_gene_id","hsapiens_homolog_ensembl_gene"), values = mitochondrial[,"ensembl_gene_id"], filters = "ensembl_gene_id", mart = mouse)
-mitochondrial.mim <- getBM(attributes = c("ensembl_gene_id", "mim_morbid_accession"), values = mitochondrial.human_homologs[,"hsapiens_homolog_ensembl_gene"], filters = "ensembl_gene_id", mart = human)
-
-# remove ensembl_gene_ids which have duplicated entrez_ids
-entrez_ids <- entrez_ids[-which(duplicated(entrez_ids$ensembl_gene_id)),]
-mitochondrial <- merge(mitochondrial, entrez_ids, by.x = "ensembl_gene_id", by.y = "ensembl_gene_id", all.x = T)
-rm(entrez_ids)
-mitochondrial.entrezIDs <- unique(mitochondrial[!is.na(mitochondrial$entrezgene),]$entrezgene)
-mitochondrial.keggIDs <- keggConv.batch(mitochondrial.entrezIDs)
-mitochondrial.keggQ <- lapply(mitochondrial.keggIDs, function(x) keggGet(x))
-mitochondrial.pathways <- unique(unlist(lapply(strsplit(names(unlist(lapply(mitochondrial.keggQ, function(x) x[[1]]$"PATHWAY"))), "\\."), function(x) x[3])))
-mitochondrial.pathways.genes <- lapply(mitochondrial.pathways, function(x) keggLink("genes", x))
-names(mitochondrial.pathways.genes) <- mitochondrial.pathways
-mitochondrial.pathways.genes.entrez_ids <- unique(gsub("mmu:", "", as.character(unlist(mitochondrial.pathways.genes))))
-mitochondrial.df <- kegg.brite[gsub("mmu", "", mitochondrial.pathways), ]
-mitochondrial.df$ID <- rownames(mitochondrial.df)
-mitochondrial.df$total <- rep(0, nrow(mitochondrial.df))
-# we are now using WCL as background to test for enrichment
-i1 <- intersect(rownames(mitochondrial.df), rownames(wcl.df))
-mitochondrial.df[i1,]$total <- wcl.df[i1,]$count
-mitochondrial.df$count <- rep(0, nrow(mitochondrial.df))
-mitochondrial.df$frac <- rep(0, nrow(mitochondrial.df))
-
-for (i in rownames(mitochondrial.df)) {
-  kL1 <- keggLink("mmu", paste("mmu", i, sep = ""))
-  mitochondrial.df[i, ]$count <- length(which(mitochondrial.keggIDs %in% kL1))
-  mitochondrial.df[i, ]$frac <- round(length(which(mitochondrial.keggIDs %in% kL1)) / length(kL1) * 100, 2)
-}
-
-# perform Fisher's Exact Test for each category
-bkgd <- length(unique(wcl.keggIDs))
-smpl <- length(mitochondrial.keggIDs)
-
-ftl <- apply(mitochondrial.df[1,], 1, function (x) {
-  ct <- as.integer(x["count"])
-  tt <- as.integer(x["total"])
-  m1 <- matrix(c(ct, tt, smpl - ct, bkgd - tt), 2, 2)
-  fisher.test(m1, alternative = "two.sided")
-})
-
-mitochondrial.df$ft_pval <- unlist(lapply(ftl, function(x) {x$p.value}))
-mitochondrial.df$ft_OR <- unlist(lapply(ftl, function(x) {x$estimate}))
-mitochondrial.df$ft_fdr <- p.adjust(mitochondrial.df$ft_pval, method = "fdr")
-
-map.marketV2(id = mitochondrial.df$ID,
-             area = mitochondrial.df$count,
-             group = mitochondrial.df$B,
-             color = log2(mitochondrial.df$ft_OR),
-             main = "Mitochondrial proteins\nKEGG pathway enrichment/depletion",
-             lab = c(TRUE, FALSE))
-
-pdf("/Users/u1001407/Dropbox//REM project-Sebastian/KEGG Analysis Figures/KEGG_toplevel_mitochondrial.pdf", width = 15, height = 10)
-map.marketV2(id = mitochondrial.df$ID,
-             area = mitochondrial.df$total,
-             group = mitochondrial.df$A,
-             color = log2(mitochondrial.df$ft_OR),
-             main = "Mitochondrial interactome\nKEGG pathway enrichment/depletion",
-             lab = c(TRUE, FALSE))
-dev.off()
-
-# OMIM analysis
-# first, get human homologs of mouse interactome genes
-mitochondrial.human_homologs <- getBM(attributes = c("ensembl_gene_id","hsapiens_homolog_ensembl_gene"), values = mitochondrial[,"ensembl_gene_id"], filters = "ensembl_gene_id", mart = mouse)
-mitochondrial.human_homologs.mim <- getBM(attributes = c("ensembl_gene_id", "mim_morbid_accession", "mim_gene_accession"), values = mitochondrial.human_homologs[,"hsapiens_homolog_ensembl_gene"], filters = "ensembl_gene_id", mart = human)
-
-# testing for enrichment of OMIM genes/terms in the WCL proteome
-bkgd <- 14874 # total number of genes in OMIM DB
-smpl <- length(unique(mitochondrial.human_homologs.mim$mim_gene_accession)) # number of genes in WCL list with OMIM gene ID
-tt <- 4404 # total number of OMIM terms, i.e. bkgd has #tt 
-ct <- length(unique(mitochondrial.human_homologs.mim$mim_morbid_accession)) # numer of genes in WCL list with OMIM term
-
-matrix(c(ct, tt - ct, smpl - ct, bkgd - tt - smpl + ct), 2, 2)
-fisher.test(matrix(c(ct, tt - ct, smpl - ct, bkgd - tt - smpl + ct), 2, 2), alternative = "two.sided")
-
-# how many genes have OMIM terms?
-# mouse
-length(unique(mitochondrial.human_homologs[which(mitochondrial.human_homologs$hsapiens_homolog_ensembl_gene %in% (unique(mitochondrial.human_homologs.mim[which(!is.na(mitochondrial.human_homologs.mim$mim_morbid_accession)),]$ensembl_gene_id))),]$ensembl_gene_id))
-# human
-length(unique(mitochondrial.human_homologs.mim[which(!is.na(mitochondrial.human_homologs.mim$mim_morbid_accession)),]$ensembl_gene_id))
-
 #-----------total interactome----------------------------------------------------------------------------------------------------------
 # 
 interactome <- read.xls("/Users/u1001407/Dropbox/REM project-Sebastian/HL-1 interactome superset.xlsx", sheet = "Sheet1" , as.is = T)
@@ -281,7 +176,7 @@ for (i in rownames(interactome.df)) {
 bkgd <- length(unique(wcl.keggIDs))
 smpl <- length(interactome.keggIDs)
 
-ftl <- apply(interactome.df[1,], 1, function (x) {
+ftl <- apply(interactome.df, 1, function (x) {
   ct <- as.integer(x["count"])
   tt <- as.integer(x["total"])
   m1 <- matrix(c(ct, tt, smpl - ct, bkgd - tt), 2, 2)
@@ -304,7 +199,7 @@ interactome.B.df$count <- sapply(unique(interactome.df$B), function(x) {count <-
 bkgd <- length(unique(wcl.keggIDs))
 smpl <- length(interactome.keggIDs)
 
-ftl <- apply(interactome.B.df[1,], 1, function (x) {
+ftl <- apply(interactome.B.df, 1, function (x) {
   ct <- as.integer(x["count"])
   tt <- as.integer(x["total"])
   m1 <- matrix(c(ct, tt, smpl - ct, bkgd - tt), 2, 2)
@@ -332,124 +227,6 @@ map.marketV2(id = interactome.df$ID,
              main = "Interactome\nKEGG pathway enrichment/depletion",
              lab = c(TRUE, FALSE))
 dev.off()
-
-# OMIM analysis
-# first, get human homologs of mouse interactome genes
-interactome.human_homologs <- getBM(attributes = c("ensembl_gene_id","hsapiens_homolog_ensembl_gene"), values = interactome[,"ensembl_gene_id"], filters = "ensembl_gene_id", mart = mouse)
-interactome.human_homologs.mim <- getBM(attributes = c("ensembl_gene_id", "mim_morbid_accession", "mim_gene_accession"), values = interactome.human_homologs[,"hsapiens_homolog_ensembl_gene"], filters = "ensembl_gene_id", mart = human)
-
-# testing for enrichment of OMIM genes/terms in the WCL proteome
-bkgd <- 14874 # total number of genes in OMIM DB
-smpl <- length(unique(interactome.human_homologs.mim$mim_gene_accession)) # number of genes in WCL list with OMIM gene ID
-tt <- 4404 # total number of OMIM terms, i.e. bkgd has #tt 
-ct <- length(unique(interactome.human_homologs.mim$mim_morbid_accession)) # numer of genes in WCL list with OMIM term
-
-matrix(c(ct, tt - ct, smpl - ct, bkgd - tt - smpl + ct), 2, 2)
-fisher.test(matrix(c(ct, tt - ct, smpl - ct, bkgd - tt - smpl + ct), 2, 2), alternative = "two.sided")
-
-# how many genes have OMIM terms?
-# mouse
-length(unique(interactome.human_homologs[which(interactome.human_homologs$hsapiens_homolog_ensembl_gene %in% (unique(interactome.human_homologs.mim[which(!is.na(interactome.human_homologs.mim$mim_morbid_accession)),]$ensembl_gene_id))),]$ensembl_gene_id))
-# human
-length(unique(interactome.human_homologs.mim[which(!is.na(interactome.human_homologs.mim$mim_morbid_accession)),]$ensembl_gene_id))
-
-makeOMIMString <- function(x){
-  id <- paste(x, sep = "", collapse = ",")
- # st <- paste("http://api.omim.org/api/entry?mimNumber=", id, "&exclude=text&format=json&apiKey=FF451B4EBBAFBD9015EB10060EA6C8855D61E1ED", sep = "")
-}
-
-st <- makeOMIMString(interactome.human_homologs.mim[which(!is.na(interactome.human_homologs.mim$mim_morbid_accession )),]$mim_gene_accession[1:20])
-
-interactome.omim <- fromJSON(unlist(paste("http://api.omim.org/api/entry?mimNumber=", st, "&exclude=text&format=json&apiKey=FF451B4EBBAFBD9015EB10060EA6C8855D61E1ED", sep = ""))
-
-#-----------HL-1 unique proteome-----------------------------------------------------------------------------------------------
-# TODO: use WCL as background(?)
-hl1 <- data.frame(unique_proteomes[,1])
-colnames(hl1) <- "ensembl_gene_id"
-
-entrez_ids <- getBM(attributes = c("ensembl_gene_id","entrezgene"), values = hl1[,"ensembl_gene_id"], filters = "ensembl_gene_id", mart = mouse)
-hl1.human_homologs <- getBM(attributes = c("ensembl_gene_id","hsapiens_homolog_ensembl_gene"), values = hl1[,"ensembl_gene_id"], filters = "ensembl_gene_id", mart = mouse)
-
-hl1 <- merge(hl1, entrez_ids, by.x = "ensembl_gene_id", by.y = "ensembl_gene_id", all.x = T)
-hl1.entrezIDs <- unique(hl1[!is.na(hl1$entrezgene),]$entrezgene)
-hl1.keggIDs <- keggConv.batch(hl1.entrezIDs)
-hl1.keggQ <- lapply(hl1.keggIDs, function(x) keggGet(x))
-hl1.pathways <- unique(unlist(lapply(strsplit(names(unlist(lapply(hl1.keggQ, function(x) x[[1]]$"PATHWAY"))), "\\."), function(x) x[3])))
-hl1.pathways.genes <- lapply(hl1.pathways, function(x) keggLink("genes", x))
-names(hl1.pathways.genes) <- hl1.pathways
-hl1.pathways.genes.entrez_ids <- unique(gsub("mmu:", "", as.character(unlist(hl1.pathways.genes))))
-hl1.df <- kegg.brite[gsub("mmu", "", hl1.pathways), ]
-hl1.df$source <- rep("HL-1", nrow(hl1.df))
-# we are now using WCL as background to test for enrichment
-i1 <- intersect(rownames(hl1.df), rownames(wcl.df))
-hl1.df$total <- rep(0, nrow(hl1.df))
-hl1.df[i1,]$total <- wcl.df[i1,]$count
-hl1.df$count <- rep(0, nrow(hl1.df))
-hl1.df$frac <- rep(0, nrow(hl1.df))
-
-for (i in rownames(hl1.df)) {
-  kL1 <- keggLink("mmu", paste("mmu", i, sep = ""))
-  hl1.df[i, ]$count <- length(which(hl1.keggIDs %in% kL1))
-  hl1.df[i, ]$frac <- round(length(which(hl1.keggIDs %in% kL1)) / length(kL1) * 100, 2)
-}
-
-# perform Fisher's Exact Test for each category
-bkgd <- length(unique(interactome.keggIDs))
-smpl <- length(hl1.keggIDs)
-
-ftl <- apply(wcl.df[1,], 1, function (x) {
-  ct <- as.integer(x["count"])
-  tt <- as.integer(x["total"])
-  m1 <- matrix(c(ct, tt, smpl - ct, bkgd - tt), 2, 2)
-  fisher.test(m1, alternative = "two.sided")
-})
-
-hl1.df$ft_pval <- unlist(lapply(ftl, function(x) {x$p.value}))
-hl1.df$ft_OR <- unlist(lapply(ftl, function(x) {x$estimate}))
-hl1.df$ft_fdr <- p.adjust(hl1.df$ft_pval, method = "fdr")
-
-
-# summarizing data at "B" level before doing Fisher's Exact test
-hl1.df.B.df <- data.frame(matrix(ncol = 5, nrow = length(unique(hl1.df$B))))
-colnames(hl1.df.B.df) <- c("B", "A", "total", "count", "source")
-hl1.df.B.df$B <- unique(hl1.df$B)
-hl1.df.B.df$A <- sapply(unique(hl1.df$B), function(x) {A <- unique(hl1.df[which(hl1.df$B %in% x), "A"])})
-hl1.df.B.df$source <- rep("HL-1", nrow(hl1.df.B.df))
-hl1.df.B.df$total <- sapply(unique(hl1.df$B), function(x) {tot <- sum(hl1.df[which(hl1.df$B %in% x), "total"])})
-hl1.df.B.df$count <- sapply(unique(hl1.df$B), function(x) {count <- sum(hl1.df[which(hl1.df$B %in% x), "count"])})
-
-bkgd <- length(unique(interactome.keggIDs))
-smpl <- length(hl1.keggIDs)
-
-ftl <- apply(hl1.df.B.df[1,], 1, function (x) {
-  ct <- as.integer(x["count"])
-  tt <- as.integer(x["total"])
-  m1 <- matrix(c(ct, tt, smpl - ct, bkgd - tt), 2, 2)
-  fisher.test(m1, alternative = "two.sided")
-})
-
-hl1.df.B.df$ft_pval <- unlist(lapply(ftl, function(x) {x$p.value}))
-hl1.df.B.df$ft_OR <- unlist(lapply(ftl, function(x) {x$estimate}))
-hl1.df.B.df$ft_fdr <- p.adjust(hl1.df.B.df$ft_pval, method = "fdr")
-
-# plotting
-map.marketV2(id = hl1.df$ID,
-             area = hl1.df$count,
-             group = hl1.df$B,
-             color = log(hl1.df$ft_OR),
-             main = "HL-1 specific interactome\nKEGG pathway enrichment/depletion",
-             lab = c(TRUE, FALSE))
-
-# rectangular tree map of top level KEGG categories
-pdf("/Users/u1001407/Dropbox//REM project-Sebastian/KEGG Analysis Figures/KEGG_toplevel_hl1.pdf", width = 15, height = 10)
-map.marketV2(id = hl1.df$ID,
-             area = hl1.df$total,
-             group = hl1.df$A,
-             color = log2(hl1.df$ft_OR),
-             main = "HL-1 specific interactome\nKEGG pathway enrichment/depletion",
-             lab = c(TRUE, FALSE))
-dev.off()
-
 
 #-----------GO RNA unrelated-------------------------------------------
 interactome.go_rna_unrelated <- read.xls(xls = "/Users/u1001407/Dropbox/REM project-Sebastian/HL-1 interactome superset.xlsx", sheet = "Sheet1", as.is = T)
@@ -482,14 +259,13 @@ interactome.go_rna_unrelated.df$frac <- rep(0, nrow(interactome.go_rna_unrelated
 for (i in rownames(interactome.go_rna_unrelated.df)) {
   kL1 <- keggLink("mmu", paste("mmu", i, sep = ""))
   interactome.go_rna_unrelated.df[i, ]$count <- length(which(interactome.go_rna_unrelated.keggIDs %in% kL1))
-  interactome.go_rna_unrelated.df[i, ]$frac <- round(length(which(interactome.go_rna_unrelated.keggIDs %in% kL1)) / length(kL1) * 100, 2)
 }
 
 # perform Fisher's Exact Test for each category
 bkgd <- length(unique(interactome.keggIDs))
 smpl <- length(interactome.go_rna_unrelated.keggIDs)
 
-ftl <- apply(interactome.go_rna_unrelated.df[1,], 1, function (x) {
+ftl <- apply(interactome.go_rna_unrelated.df, 1, function (x) {
   ct <- as.integer(x["count"])
   tt <- as.integer(x["total"])
   m1 <- matrix(c(ct, tt, smpl - ct, bkgd - tt), 2, 2)
@@ -513,7 +289,7 @@ interactome.go_rna_unrelated.B.df$count <- sapply(unique(interactome.go_rna_unre
 bkgd <- length(unique(interactome.keggIDs))
 smpl <- length(interactome.go_rna_unrelated.keggIDs)
 
-ftl <- apply(interactome.go_rna_unrelated.B.df[1,], 1, function (x) {
+ftl <- apply(interactome.go_rna_unrelated.B.df, 1, function (x) {
   ct <- as.integer(x["count"])
   tt <- as.integer(x["total"])
   m1 <- matrix(c(ct, tt, smpl - ct, bkgd - tt), 2, 2)
@@ -523,26 +299,6 @@ ftl <- apply(interactome.go_rna_unrelated.B.df[1,], 1, function (x) {
 interactome.go_rna_unrelated.B.df$ft_pval <- unlist(lapply(ftl, function(x) {x$p.value}))
 interactome.go_rna_unrelated.B.df$ft_OR <- unlist(lapply(ftl, function(x) {x$estimate}))
 interactome.go_rna_unrelated.B.df$ft_fdr <- p.adjust(interactome.go_rna_unrelated.B.df$ft_pval, method = "fdr")
-
-# OMIM analysis
-# first, get human homologs of mouse interactome genes
-interactome.go_rna_unrelated.human_homologs <- getBM(attributes = c("ensembl_gene_id","hsapiens_homolog_ensembl_gene"), values = interactome.go_rna_unrelated[,"ensembl_gene_id"], filters = "ensembl_gene_id", mart = mouse)
-interactome.go_rna_unrelated.human_homologs.mim <- getBM(attributes = c("ensembl_gene_id", "mim_morbid_accession", "mim_gene_accession"), values = interactome.go_rna_unrelated.human_homologs[,"hsapiens_homolog_ensembl_gene"], filters = "ensembl_gene_id", mart = human)
-
-# testing for enrichment of OMIM genes/terms in the interactome.go_rna_unrelated proteome
-bkgd <- 14874 # total number of genes in OMIM DB
-smpl <- length(unique(interactome.go_rna_unrelated.human_homologs.mim$mim_gene_accession)) # number of genes in interactome.go_rna_unrelated list with OMIM gene ID
-tt <- 4404 # total number of OMIM terms, i.e. bkgd has #tt 
-ct <- length(unique(interactome.go_rna_unrelated.human_homologs.mim$mim_morbid_accession)) # numer of genes in interactome.go_rna_unrelated list with OMIM term
-
-matrix(c(ct, tt - ct, smpl - ct, bkgd - tt - smpl + ct), 2, 2)
-fisher.test(matrix(c(ct, tt - ct, smpl - ct, bkgd - tt - smpl + ct), 2, 2), alternative = "two.sided")
-
-# how many genes have OMIM terms?
-# mouse
-length(unique(interactome.go_rna_unrelated.human_homologs[which(interactome.go_rna_unrelated.human_homologs$hsapiens_homolog_ensembl_gene %in% (unique(interactome.go_rna_unrelated.human_homologs.mim[which(!is.na(interactome.go_rna_unrelated.human_homologs.mim$mim_morbid_accession)),]$ensembl_gene_id))),]$ensembl_gene_id))
-# human
-length(unique(interactome.go_rna_unrelated.human_homologs.mim[which(!is.na(interactome.go_rna_unrelated.human_homologs.mim$mim_morbid_accession)),]$ensembl_gene_id))
 
 #-----------GO RNA related-------------------------------------------
 interactome.go_rna_related <- read.xls(xls = "/Users/u1001407/Dropbox/REM project-Sebastian/HL-1 interactome superset.xlsx", sheet = "Sheet1", as.is = T)
@@ -561,10 +317,11 @@ interactome.go_rna_related.entrezIDs <- unique(interactome.go_rna_related[!is.na
 interactome.go_rna_related.keggIDs <- keggConv.batch(interactome.go_rna_related.entrezIDs)
 
 interactome.go_rna_related.df <- interactome.df
+# TODO - make sure that same background is used in all tests!!!
 # we are now using interactome as background to test for enrichment
 i1 <- intersect(rownames(interactome.go_rna_related.df), rownames(interactome.df))
 interactome.go_rna_related.df$total <- rep(0, nrow(interactome.go_rna_related.df))
-interactome.go_rna_related.df[i1,]$total <- wcl.df[i1,]$count
+interactome.go_rna_related.df[i1,]$total <- interactome.df[i1,]$count
 interactome.go_rna_related.df$source <- rep("GO_RNA_related", nrow(interactome.go_rna_related.df))
 interactome.go_rna_related.df$ID <- rownames(interactome.go_rna_related.df)
 interactome.go_rna_related.df$count <- rep(0, nrow(interactome.go_rna_related.df))
@@ -573,14 +330,13 @@ interactome.go_rna_related.df$frac <- rep(0, nrow(interactome.go_rna_related.df)
 for (i in rownames(interactome.go_rna_related.df)) {
   kL1 <- keggLink("mmu", paste("mmu", i, sep = ""))
   interactome.go_rna_related.df[i, ]$count <- length(which(interactome.go_rna_related.keggIDs %in% kL1))
-  interactome.go_rna_related.df[i, ]$frac <- round(length(which(interactome.go_rna_related.keggIDs %in% kL1)) / length(kL1) * 100, 2)
 }
 
 # perform Fisher's Exact Test for each category
 bkgd <- length(unique(interactome.keggIDs))
 smpl <- length(interactome.go_rna_related.keggIDs)
 
-ftl <- apply(interactome.go_rna_related.df[1,], 1, function (x) {
+ftl <- apply(interactome.go_rna_related.df, 1, function (x) {
   ct <- as.integer(x["count"])
   tt <- as.integer(x["total"])
   m1 <- matrix(c(ct, tt, smpl - ct, bkgd - tt), 2, 2)
@@ -603,7 +359,7 @@ interactome.go_rna_related.B.df$count <- sapply(unique(interactome.go_rna_relate
 bkgd <- length(unique(interactome.keggIDs))
 smpl <- length(interactome.go_rna_related.keggIDs)
 
-ftl <- apply(interactome.go_rna_related.B.df[1,], 1, function (x) {
+ftl <- apply(interactome.go_rna_related.B.df, 1, function (x) {
   ct <- as.integer(x["count"])
   tt <- as.integer(x["total"])
   m1 <- matrix(c(ct, tt, smpl - ct, bkgd - tt), 2, 2)
@@ -613,27 +369,6 @@ ftl <- apply(interactome.go_rna_related.B.df[1,], 1, function (x) {
 interactome.go_rna_related.B.df$ft_pval <- unlist(lapply(ftl, function(x) {x$p.value}))
 interactome.go_rna_related.B.df$ft_OR <- unlist(lapply(ftl, function(x) {x$estimate}))
 interactome.go_rna_related.B.df$ft_fdr <- p.adjust(interactome.go_rna_related.B.df$ft_pval, method = "fdr")
-
-# OMIM analysis
-# first, get human homologs of mouse interactome genes
-interactome.go_rna_related.human_homologs <- getBM(attributes = c("ensembl_gene_id","hsapiens_homolog_ensembl_gene"), values = interactome.go_rna_related[,"ensembl_gene_id"], filters = "ensembl_gene_id", mart = mouse)
-interactome.go_rna_related.human_homologs.mim <- getBM(attributes = c("ensembl_gene_id", "mim_morbid_accession", "mim_gene_accession"), values = interactome.go_rna_related.human_homologs[,"hsapiens_homolog_ensembl_gene"], filters = "ensembl_gene_id", mart = human)
-
-# testing for enrichment of OMIM genes/terms in the interactome.go_rna_related proteome
-
-bkgd <- 14874 # total number of genes in OMIM DB
-smpl <- length(unique(interactome.go_rna_related.human_homologs.mim$mim_gene_accession)) # number of genes in interactome.go_rna_related list with OMIM gene ID
-tt <- 4404 # total number of OMIM terms, i.e. bkgd has #tt 
-ct <- length(unique(interactome.go_rna_related.human_homologs.mim$mim_morbid_accession)) # numer of genes in interactome.go_rna_related list with OMIM term
-
-matrix(c(ct, tt - ct, smpl - ct, bkgd - tt - smpl + ct), 2, 2)
-fisher.test(matrix(c(ct, tt - ct, smpl - ct, bkgd - tt - smpl + ct), 2, 2), alternative = "two.sided")
-
-# how many genes have OMIM terms?
-# mouse
-length(unique(interactome.go_rna_related.human_homologs[which(interactome.go_rna_related.human_homologs$hsapiens_homolog_ensembl_gene %in% (unique(interactome.go_rna_related.human_homologs.mim[which(!is.na(interactome.go_rna_related.human_homologs.mim$mim_morbid_accession)),]$ensembl_gene_id))),]$ensembl_gene_id))
-# human
-length(unique(interactome.go_rna_related.human_homologs.mim[which(!is.na(interactome.go_rna_related.human_homologs.mim$mim_morbid_accession)),]$ensembl_gene_id))
 
 #-----------unrecognized RBPs-------------------------
 interactome.unrecognized.rbp <- read.xls(xls = "/Users/u1001407/Dropbox/REM project-Sebastian/HL-1 interactome superset.xlsx", sheet = "Sheet1", as.is = T)
@@ -656,6 +391,7 @@ interactome.unrecognized.rbp.entrezIDs <- unique(interactome.unrecognized.rbp[!i
 interactome.unrecognized.rbp.keggIDs <- keggConv.batch(interactome.unrecognized.rbp.entrezIDs)
 
 interactome.unrecognized.rbp.df <- interactome.df
+
 # we are now using WCL as background to test for enrichment
 i1 <- intersect(rownames(interactome.unrecognized.rbp.df), rownames(wcl.df))
 interactome.unrecognized.rbp.df$total <- rep(0, nrow(interactome.unrecognized.rbp.df))
@@ -668,27 +404,16 @@ interactome.unrecognized.rbp.df$frac <- rep(0, nrow(interactome.unrecognized.rbp
 for (i in rownames(interactome.unrecognized.rbp.df)) {
   kL1 <- keggLink("mmu", paste("mmu", i, sep = ""))
   interactome.unrecognized.rbp.df[i, ]$count <- length(which(interactome.unrecognized.rbp.keggIDs %in% kL1))
-  interactome.unrecognized.rbp.df[i, ]$frac <- round(length(which(interactome.unrecognized.rbp.keggIDs %in% kL1)) / length(kL1) * 100, 2)
 }
 
-# perform hypergeometric test for each category
-interactome.unrecognized.rbp.df$hyper_depleted <- rep(0.0, nrow(interactome.unrecognized.rbp.df))
-interactome.unrecognized.rbp.df$hyper_enriched <- rep(0.0, nrow(interactome.unrecognized.rbp.df))
-
-bkgd <- length(unique(wcl.keggIDs))
-smpl <- length(interactome.unrecognized.rbp.keggIDs)
-interactome.unrecognized.rbp.df$hyper_depleted <- phyper(interactome.unrecognized.rbp.df$count - 1, interactome.unrecognized.rbp.df$total, bkgd - interactome.unrecognized.rbp.df$total, smpl, lower.tail = T)
-interactome.unrecognized.rbp.df$hyper_enriched <- phyper(interactome.unrecognized.rbp.df$count - 1, interactome.unrecognized.rbp.df$total, bkgd - interactome.unrecognized.rbp.df$total, smpl, lower.tail = F)
-interactome.unrecognized.rbp.df$hyper_depleted_fdr <- p.adjust(interactome.unrecognized.rbp.df$hyper_depleted, method = "fdr")
-interactome.unrecognized.rbp.df$hyper_enriched_fdr <- p.adjust(interactome.unrecognized.rbp.df$hyper_enriched, method = "fdr")
-
 # perform Fisher's Exact Test for each category
-bkgd <- length(unique(wcl.keggIDs))
+bkgd <- length(unique(interactome.keggIDs))
 smpl <- length(interactome.unrecognized.rbp.keggIDs)
 ftl <- apply(interactome.unrecognized.rbp.df, 1, function (x) {
   ct <- as.integer(x["count"])
   tt <- as.integer(x["total"])
-  fisher.test(matrix(c(ct, tt - ct, smpl - ct, bkgd - tt - smpl + ct), 2, 2), alternative = "two.sided")
+  m1 <- matrix(c(ct, tt, smpl - ct, bkgd - tt), 2, 2)
+  fisher.test(m1, alternative = "two.sided")
 })
 interactome.unrecognized.rbp.df$ft_pval <- unlist(lapply(ftl, function(x) {x$p.value}))
 interactome.unrecognized.rbp.df$ft_OR <- unlist(lapply(ftl, function(x) {x$estimate}))
@@ -703,13 +428,15 @@ interactome.unrecognized.rbp.B.df$source <- rep("RBD_unrecognized", nrow(interac
 interactome.unrecognized.rbp.B.df$total <- sapply(unique(interactome.unrecognized.rbp.df$B), function(x) {tot <- sum(interactome.unrecognized.rbp.df[which(interactome.unrecognized.rbp.df$B %in% x), "total"])})
 interactome.unrecognized.rbp.B.df$count <- sapply(unique(interactome.unrecognized.rbp.df$B), function(x) {count <- sum(interactome.unrecognized.rbp.df[which(interactome.unrecognized.rbp.df$B %in% x), "count"])})
 
-bkgd <- length(unique(wcl.keggIDs))
+bkgd <- length(unique(interactome.keggIDs))
 smpl <- length(interactome.unrecognized.rbp.keggIDs)
 ftl <- apply(interactome.unrecognized.rbp.B.df, 1, function (x) {
   ct <- as.integer(x["count"])
   tt <- as.integer(x["total"])
-  fisher.test(matrix(c(ct, tt - ct, smpl - ct, bkgd - tt - smpl + ct), 2, 2), alternative = "two.sided")
+  m1 <- matrix(c(ct, tt, smpl - ct, bkgd - tt), 2, 2)
+  fisher.test(m1, alternative = "two.sided")
 })
+
 interactome.unrecognized.rbp.B.df$ft_pval <- unlist(lapply(ftl, function(x) {x$p.value}))
 interactome.unrecognized.rbp.B.df$ft_OR <- unlist(lapply(ftl, function(x) {x$estimate}))
 interactome.unrecognized.rbp.B.df$ft_fdr <- p.adjust(interactome.unrecognized.rbp.B.df$ft_pval, method = "fdr")
@@ -748,22 +475,10 @@ interactome.recognized.rbp.df$frac <- rep(0, nrow(interactome.recognized.rbp.df)
 for (i in rownames(interactome.recognized.rbp.df)) {
   kL1 <- keggLink("mmu", paste("mmu", i, sep = ""))
   interactome.recognized.rbp.df[i, ]$count <- length(which(interactome.recognized.rbp.keggIDs %in% kL1))
-  interactome.recognized.rbp.df[i, ]$frac <- round(length(which(interactome.recognized.rbp.keggIDs %in% kL1)) / length(kL1) * 100, 2)
 }
 
-# perform hypergeometric test for each category
-interactome.recognized.rbp.df$hyper_depleted <- rep(0.0, nrow(interactome.recognized.rbp.df))
-interactome.recognized.rbp.df$hyper_enriched <- rep(0.0, nrow(interactome.recognized.rbp.df))
-
-bkgd <- length(unique(wcl.keggIDs))
-smpl <- length(interactome.recognized.rbp.keggIDs)
-interactome.recognized.rbp.df$hyper_depleted <- phyper(interactome.recognized.rbp.df$count - 1, interactome.recognized.rbp.df$total, bkgd - interactome.recognized.rbp.df$total, smpl, lower.tail = T)
-interactome.recognized.rbp.df$hyper_enriched <- phyper(interactome.recognized.rbp.df$count - 1, interactome.recognized.rbp.df$total, bkgd - interactome.recognized.rbp.df$total, smpl, lower.tail = F)
-interactome.recognized.rbp.df$hyper_depleted_fdr <- p.adjust(interactome.recognized.rbp.df$hyper_depleted, method = "fdr")
-interactome.recognized.rbp.df$hyper_enriched_fdr <- p.adjust(interactome.recognized.rbp.df$hyper_enriched, method = "fdr")
-
 # perform Fisher's Exact Test for each category
-bkgd <- length(unique(wcl.keggIDs))
+bkgd <- length(unique(interactome.keggIDs))
 smpl <- length(interactome.recognized.rbp.keggIDs)
 ftl <- apply(interactome.recognized.rbp.df, 1, function (x) {
   ct <- as.integer(x["count"])
@@ -783,12 +498,12 @@ interactome.recognized.rbp.B.df$source <- rep("RBD_recognized", nrow(interactome
 interactome.recognized.rbp.B.df$total <- sapply(unique(interactome.recognized.rbp.df$B), function(x) {tot <- sum(interactome.recognized.rbp.df[which(interactome.recognized.rbp.df$B %in% x), "total"])})
 interactome.recognized.rbp.B.df$count <- sapply(unique(interactome.recognized.rbp.df$B), function(x) {count <- sum(interactome.recognized.rbp.df[which(interactome.recognized.rbp.df$B %in% x), "count"])})
 
-bkgd <- length(unique(wcl.keggIDs))
+bkgd <- length(unique(interactome.keggIDs))
 smpl <- length(interactome.recognized.rbp.keggIDs)
 ftl <- apply(interactome.recognized.rbp.B.df, 1, function (x) {
   ct <- as.integer(x["count"])
   tt <- as.integer(x["total"])
-  fisher.test(matrix(c(ct, tt - ct, smpl - ct, bkgd - tt - smpl + ct), 2, 2), alternative = "two.sided")
+  fisher.test(matrix(c(ct, tt, smpl - ct, bkgd - tt), 2, 2), alternative = "two.sided")
 })
 interactome.recognized.rbp.B.df$ft_pval <- unlist(lapply(ftl, function(x) {x$p.value}))
 interactome.recognized.rbp.B.df$ft_OR <- unlist(lapply(ftl, function(x) {x$estimate}))
@@ -799,8 +514,7 @@ df1 <- rbind(interactome.B.df[, c("A", "B", "ft_OR", "ft_fdr", "source")],
              interactome.go_rna_related.B.df[, c("A", "B", "ft_OR", "ft_fdr", "source")], 
              interactome.go_rna_unrelated.B.df[, c("A", "B", "ft_OR", "ft_fdr", "source")],
              interactome.unrecognized.rbp.B.df[, c("A", "B", "ft_OR", "ft_fdr", "source")],
-             interactome.recognized.rbp.B.df[, c("A", "B", "ft_OR", "ft_fdr", "source")]) #,
-             #hl1.df.B.df[, c("A", "B", "ft_OR", "ft_fdr", "source")])
+             interactome.recognized.rbp.B.df[, c("A", "B", "ft_OR", "ft_fdr", "source")])
 
 df1$source <- as.factor(df1$source)
 df1$source <- factor(df1$source, levels = levels(df1$source)[c(3,1,2,4,5)])
@@ -1184,6 +898,178 @@ map.marketV2(id = hek293.df$ID,
              group = hek293.df$A,
              color = log2(hek293.df$ft_OR),
              main = "hek293 specific interactome\nKEGG pathway enrichment/depletion",
+             lab = c(TRUE, FALSE))
+dev.off()
+
+#-----------interactome mitochondrial proteins---------
+mitochondrial <- read.xls("/Users/u1001407/Dropbox/REM project-Sebastian/Mitochondria list 26March15.xlsx", sheet = 1, as.is = T)
+colnames(mitochondrial)[2] <- "ensembl_gene_id"
+entrez_ids <- getBM(attributes = c("ensembl_gene_id","entrezgene"), values = mitochondrial[,"ensembl_gene_id"], filters = "ensembl_gene_id", mart = mouse)
+mitochondrial.human_homologs <- getBM(attributes = c("ensembl_gene_id","hsapiens_homolog_ensembl_gene"), values = mitochondrial[,"ensembl_gene_id"], filters = "ensembl_gene_id", mart = mouse)
+mitochondrial.mim <- getBM(attributes = c("ensembl_gene_id", "mim_morbid_accession"), values = mitochondrial.human_homologs[,"hsapiens_homolog_ensembl_gene"], filters = "ensembl_gene_id", mart = human)
+
+# remove ensembl_gene_ids which have duplicated entrez_ids
+entrez_ids <- entrez_ids[-which(duplicated(entrez_ids$ensembl_gene_id)),]
+mitochondrial <- merge(mitochondrial, entrez_ids, by.x = "ensembl_gene_id", by.y = "ensembl_gene_id", all.x = T)
+rm(entrez_ids)
+mitochondrial.entrezIDs <- unique(mitochondrial[!is.na(mitochondrial$entrezgene),]$entrezgene)
+mitochondrial.keggIDs <- keggConv.batch(mitochondrial.entrezIDs)
+mitochondrial.keggQ <- lapply(mitochondrial.keggIDs, function(x) keggGet(x))
+mitochondrial.pathways <- unique(unlist(lapply(strsplit(names(unlist(lapply(mitochondrial.keggQ, function(x) x[[1]]$"PATHWAY"))), "\\."), function(x) x[3])))
+mitochondrial.pathways.genes <- lapply(mitochondrial.pathways, function(x) keggLink("genes", x))
+names(mitochondrial.pathways.genes) <- mitochondrial.pathways
+mitochondrial.pathways.genes.entrez_ids <- unique(gsub("mmu:", "", as.character(unlist(mitochondrial.pathways.genes))))
+mitochondrial.df <- kegg.brite[gsub("mmu", "", mitochondrial.pathways), ]
+mitochondrial.df$ID <- rownames(mitochondrial.df)
+mitochondrial.df$total <- rep(0, nrow(mitochondrial.df))
+# we are now using WCL as background to test for enrichment
+i1 <- intersect(rownames(mitochondrial.df), rownames(wcl.df))
+mitochondrial.df[i1,]$total <- wcl.df[i1,]$count
+mitochondrial.df$count <- rep(0, nrow(mitochondrial.df))
+mitochondrial.df$frac <- rep(0, nrow(mitochondrial.df))
+
+for (i in rownames(mitochondrial.df)) {
+  kL1 <- keggLink("mmu", paste("mmu", i, sep = ""))
+  mitochondrial.df[i, ]$count <- length(which(mitochondrial.keggIDs %in% kL1))
+  mitochondrial.df[i, ]$frac <- round(length(which(mitochondrial.keggIDs %in% kL1)) / length(kL1) * 100, 2)
+}
+
+# perform Fisher's Exact Test for each category
+bkgd <- length(unique(wcl.keggIDs))
+smpl <- length(mitochondrial.keggIDs)
+
+ftl <- apply(mitochondrial.df[1,], 1, function (x) {
+  ct <- as.integer(x["count"])
+  tt <- as.integer(x["total"])
+  m1 <- matrix(c(ct, tt, smpl - ct, bkgd - tt), 2, 2)
+  fisher.test(m1, alternative = "two.sided")
+})
+
+mitochondrial.df$ft_pval <- unlist(lapply(ftl, function(x) {x$p.value}))
+mitochondrial.df$ft_OR <- unlist(lapply(ftl, function(x) {x$estimate}))
+mitochondrial.df$ft_fdr <- p.adjust(mitochondrial.df$ft_pval, method = "fdr")
+
+map.marketV2(id = mitochondrial.df$ID,
+             area = mitochondrial.df$count,
+             group = mitochondrial.df$B,
+             color = log2(mitochondrial.df$ft_OR),
+             main = "Mitochondrial proteins\nKEGG pathway enrichment/depletion",
+             lab = c(TRUE, FALSE))
+
+pdf("/Users/u1001407/Dropbox//REM project-Sebastian/KEGG Analysis Figures/KEGG_toplevel_mitochondrial.pdf", width = 15, height = 10)
+map.marketV2(id = mitochondrial.df$ID,
+             area = mitochondrial.df$total,
+             group = mitochondrial.df$A,
+             color = log2(mitochondrial.df$ft_OR),
+             main = "Mitochondrial interactome\nKEGG pathway enrichment/depletion",
+             lab = c(TRUE, FALSE))
+dev.off()
+
+# OMIM analysis
+# first, get human homologs of mouse interactome genes
+mitochondrial.human_homologs <- getBM(attributes = c("ensembl_gene_id","hsapiens_homolog_ensembl_gene"), values = mitochondrial[,"ensembl_gene_id"], filters = "ensembl_gene_id", mart = mouse)
+mitochondrial.human_homologs.mim <- getBM(attributes = c("ensembl_gene_id", "mim_morbid_accession", "mim_gene_accession"), values = mitochondrial.human_homologs[,"hsapiens_homolog_ensembl_gene"], filters = "ensembl_gene_id", mart = human)
+
+# testing for enrichment of OMIM genes/terms in the WCL proteome
+bkgd <- 14874 # total number of genes in OMIM DB
+smpl <- length(unique(mitochondrial.human_homologs.mim$mim_gene_accession)) # number of genes in WCL list with OMIM gene ID
+tt <- 4404 # total number of OMIM terms, i.e. bkgd has #tt 
+ct <- length(unique(mitochondrial.human_homologs.mim$mim_morbid_accession)) # numer of genes in WCL list with OMIM term
+
+matrix(c(ct, tt - ct, smpl - ct, bkgd - tt - smpl + ct), 2, 2)
+fisher.test(matrix(c(ct, tt - ct, smpl - ct, bkgd - tt - smpl + ct), 2, 2), alternative = "two.sided")
+
+# how many genes have OMIM terms?
+# mouse
+length(unique(mitochondrial.human_homologs[which(mitochondrial.human_homologs$hsapiens_homolog_ensembl_gene %in% (unique(mitochondrial.human_homologs.mim[which(!is.na(mitochondrial.human_homologs.mim$mim_morbid_accession)),]$ensembl_gene_id))),]$ensembl_gene_id))
+# human
+length(unique(mitochondrial.human_homologs.mim[which(!is.na(mitochondrial.human_homologs.mim$mim_morbid_accession)),]$ensembl_gene_id))
+
+#-----------HL-1 unique proteome-----------------------------------------------------------------------------------------------
+# TODO: use WCL as background(?)
+hl1 <- data.frame(unique_proteomes[,1])
+colnames(hl1) <- "ensembl_gene_id"
+
+entrez_ids <- getBM(attributes = c("ensembl_gene_id","entrezgene"), values = hl1[,"ensembl_gene_id"], filters = "ensembl_gene_id", mart = mouse)
+hl1.human_homologs <- getBM(attributes = c("ensembl_gene_id","hsapiens_homolog_ensembl_gene"), values = hl1[,"ensembl_gene_id"], filters = "ensembl_gene_id", mart = mouse)
+
+hl1 <- merge(hl1, entrez_ids, by.x = "ensembl_gene_id", by.y = "ensembl_gene_id", all.x = T)
+hl1.entrezIDs <- unique(hl1[!is.na(hl1$entrezgene),]$entrezgene)
+hl1.keggIDs <- keggConv.batch(hl1.entrezIDs)
+hl1.keggQ <- lapply(hl1.keggIDs, function(x) keggGet(x))
+hl1.pathways <- unique(unlist(lapply(strsplit(names(unlist(lapply(hl1.keggQ, function(x) x[[1]]$"PATHWAY"))), "\\."), function(x) x[3])))
+hl1.pathways.genes <- lapply(hl1.pathways, function(x) keggLink("genes", x))
+names(hl1.pathways.genes) <- hl1.pathways
+hl1.pathways.genes.entrez_ids <- unique(gsub("mmu:", "", as.character(unlist(hl1.pathways.genes))))
+hl1.df <- kegg.brite[gsub("mmu", "", hl1.pathways), ]
+hl1.df$source <- rep("HL-1", nrow(hl1.df))
+# we are now using WCL as background to test for enrichment
+i1 <- intersect(rownames(hl1.df), rownames(wcl.df))
+hl1.df$total <- rep(0, nrow(hl1.df))
+hl1.df[i1,]$total <- wcl.df[i1,]$count
+hl1.df$count <- rep(0, nrow(hl1.df))
+hl1.df$frac <- rep(0, nrow(hl1.df))
+
+for (i in rownames(hl1.df)) {
+  kL1 <- keggLink("mmu", paste("mmu", i, sep = ""))
+  hl1.df[i, ]$count <- length(which(hl1.keggIDs %in% kL1))
+  hl1.df[i, ]$frac <- round(length(which(hl1.keggIDs %in% kL1)) / length(kL1) * 100, 2)
+}
+
+# perform Fisher's Exact Test for each category
+bkgd <- length(unique(interactome.keggIDs))
+smpl <- length(hl1.keggIDs)
+
+ftl <- apply(hl1.df, 1, function (x) {
+  ct <- as.integer(x["count"])
+  tt <- as.integer(x["total"])
+  m1 <- matrix(c(ct, tt, smpl - ct, bkgd - tt), 2, 2)
+  fisher.test(m1, alternative = "two.sided")
+})
+
+hl1.df$ft_pval <- unlist(lapply(ftl, function(x) {x$p.value}))
+hl1.df$ft_OR <- unlist(lapply(ftl, function(x) {x$estimate}))
+hl1.df$ft_fdr <- p.adjust(hl1.df$ft_pval, method = "fdr")
+
+
+# summarizing data at "B" level before doing Fisher's Exact test
+hl1.df.B.df <- data.frame(matrix(ncol = 5, nrow = length(unique(hl1.df$B))))
+colnames(hl1.df.B.df) <- c("B", "A", "total", "count", "source")
+hl1.df.B.df$B <- unique(hl1.df$B)
+hl1.df.B.df$A <- sapply(unique(hl1.df$B), function(x) {A <- unique(hl1.df[which(hl1.df$B %in% x), "A"])})
+hl1.df.B.df$source <- rep("HL-1", nrow(hl1.df.B.df))
+hl1.df.B.df$total <- sapply(unique(hl1.df$B), function(x) {tot <- sum(hl1.df[which(hl1.df$B %in% x), "total"])})
+hl1.df.B.df$count <- sapply(unique(hl1.df$B), function(x) {count <- sum(hl1.df[which(hl1.df$B %in% x), "count"])})
+
+bkgd <- length(unique(interactome.keggIDs))
+smpl <- length(hl1.keggIDs)
+
+ftl <- apply(hl1.df.B.df, 1, function (x) {
+  ct <- as.integer(x["count"])
+  tt <- as.integer(x["total"])
+  m1 <- matrix(c(ct, tt, smpl - ct, bkgd - tt), 2, 2)
+  fisher.test(m1, alternative = "two.sided")
+})
+
+hl1.df.B.df$ft_pval <- unlist(lapply(ftl, function(x) {x$p.value}))
+hl1.df.B.df$ft_OR <- unlist(lapply(ftl, function(x) {x$estimate}))
+hl1.df.B.df$ft_fdr <- p.adjust(hl1.df.B.df$ft_pval, method = "fdr")
+
+# plotting
+map.marketV2(id = hl1.df$ID,
+             area = hl1.df$count,
+             group = hl1.df$B,
+             color = log(hl1.df$ft_OR),
+             main = "HL-1 specific interactome\nKEGG pathway enrichment/depletion",
+             lab = c(TRUE, FALSE))
+
+# rectangular tree map of top level KEGG categories
+pdf("/Users/u1001407/Dropbox//REM project-Sebastian/KEGG Analysis Figures/KEGG_toplevel_hl1.pdf", width = 15, height = 10)
+map.marketV2(id = hl1.df$ID,
+             area = hl1.df$total,
+             group = hl1.df$A,
+             color = log2(hl1.df$ft_OR),
+             main = "HL-1 specific interactome\nKEGG pathway enrichment/depletion",
              lab = c(TRUE, FALSE))
 dev.off()
 
