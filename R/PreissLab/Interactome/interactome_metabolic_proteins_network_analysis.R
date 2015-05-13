@@ -28,7 +28,7 @@ library("GO.db")
 library("KEGGREST")
 library("jsonlite")
 library("ggplot2")
-
+library("RDAVIDWebService")
 
 source("/Users/u1001407/Dropbox/Development/GeneralPurpose/R/map_market_V2.R")
 
@@ -185,7 +185,7 @@ ftl <- apply(interactome.df, 1, function (x) {
 
 interactome.df$ft_pval <- unlist(lapply(ftl, function(x) {x$p.value}))
 interactome.df$ft_OR <- unlist(lapply(ftl, function(x) {x$estimate}))
-interactome.df$ft_fdr <- p.adjust(interactome.df$ft_pval, method = "fdr")
+interactome.df$ft_fdr <- p.adjust(interactome.df$ft_pval, method = "bonferroni", n = nrow(wcl.df))
 
 #---------interactome-summarizing data at "B" level before doing Fisher's Exact test------
 interactome.B.df <- data.frame(matrix(ncol = 5, nrow = length(unique(interactome.df$B))))
@@ -208,7 +208,7 @@ ftl <- apply(interactome.B.df, 1, function (x) {
 
 interactome.B.df$ft_pval <- unlist(lapply(ftl, function(x) {x$p.value}))
 interactome.B.df$ft_OR <- unlist(lapply(ftl, function(x) {x$estimate}))
-interactome.B.df$ft_fdr <- p.adjust(interactome.B.df$ft_pval, method = "fdr")
+interactome.B.df$ft_fdr <- p.adjust(interactome.B.df$ft_pval, method = "bonferroni", n = nrow(wcl.df))
 
 # plotting
 map.marketV2(id = interactome.df$ID,
@@ -229,7 +229,7 @@ map.marketV2(id = interactome.df$ID,
 dev.off()
 
 #-----------GO RNA unrelated-------------------------------------------
-interactome.go_rna_unrelated <- read.xls(xls = "/Users/u1001407/Dropbox/REM project-Sebastian/HL-1 interactome superset.xlsx", sheet = "Sheet1", as.is = T)
+interactome.go_rna_unrelated <- read.xls(xls = "/Users/u1001407/Dropbox/REM project-Sebastian/HL-1 interactome superset.xlsx", sheet = "sheet 1", as.is = T)
 colnames(interactome.go_rna_unrelated)[1:2] <- c("ensembl_gene_id", "gene_symbol")
 interactome.go_rna_unrelated$GO <- as.factor(interactome.go_rna_unrelated$GO)
 interactome.go_rna_unrelated$RBD <- as.factor(interactome.go_rna_unrelated$RBD)
@@ -248,13 +248,11 @@ interactome.go_rna_unrelated.df <- interactome.df
 interactome.go_rna_unrelated.df$source <- rep("GO_RNA_unrelated", nrow(interactome.go_rna_unrelated.df))
 interactome.go_rna_unrelated.df$ID <- rownames(interactome.go_rna_unrelated.df)
 interactome.go_rna_unrelated.df$total <- rep(0, nrow(interactome.go_rna_unrelated.df))
+
 # we are now using WCL as background to test for enrichment
 i1 <- intersect(rownames(interactome.go_rna_unrelated.df), rownames(wcl.df))
-# 2015-05-4 change background to interactome, seems more appropriate
-i1 <- intersect(rownames(interactome.go_rna_unrelated.df), rownames(interactome.df))
-interactome.go_rna_unrelated.df[i1,]$total <- interactome.df[i1,]$count
+interactome.go_rna_unrelated.df[i1,]$total <- wcl.df[i1,]$count
 interactome.go_rna_unrelated.df$count <- rep(0, nrow(interactome.go_rna_unrelated.df))
-interactome.go_rna_unrelated.df$frac <- rep(0, nrow(interactome.go_rna_unrelated.df))
 
 for (i in rownames(interactome.go_rna_unrelated.df)) {
   kL1 <- keggLink("mmu", paste("mmu", i, sep = ""))
@@ -262,7 +260,8 @@ for (i in rownames(interactome.go_rna_unrelated.df)) {
 }
 
 # perform Fisher's Exact Test for each category
-bkgd <- length(unique(interactome.keggIDs))
+# Using WCL as background
+bkgd <- length(unique(wcl.keggIDs))
 smpl <- length(interactome.go_rna_unrelated.keggIDs)
 
 ftl <- apply(interactome.go_rna_unrelated.df, 1, function (x) {
@@ -274,7 +273,7 @@ ftl <- apply(interactome.go_rna_unrelated.df, 1, function (x) {
 
 interactome.go_rna_unrelated.df$ft_pval <- unlist(lapply(ftl, function(x) {x$p.value}))
 interactome.go_rna_unrelated.df$ft_OR <- unlist(lapply(ftl, function(x) {x$estimate}))
-interactome.go_rna_unrelated.df$ft_fdr <- p.adjust(interactome.go_rna_unrelated.df$ft_pval, method = "fdr")
+interactome.go_rna_unrelated.df$ft_fdr <- p.adjust(interactome.go_rna_unrelated.df$ft_pval, method = "bonferroni", n = nrow(wcl.df))
 
 # summarizing data at "B" level before doing Fisher's Exact test
 interactome.go_rna_unrelated.B.df <- data.frame(matrix(ncol = 5, nrow = length(unique(interactome.go_rna_unrelated.df$B))))
@@ -285,10 +284,7 @@ interactome.go_rna_unrelated.B.df$source <- rep("GO_RNA_unrelated", nrow(interac
 interactome.go_rna_unrelated.B.df$total <- sapply(unique(interactome.go_rna_unrelated.df$B), function(x) {tot <- sum(interactome.go_rna_unrelated.df[which(interactome.go_rna_unrelated.df$B %in% x), "total"])})
 interactome.go_rna_unrelated.B.df$count <- sapply(unique(interactome.go_rna_unrelated.df$B), function(x) {count <- sum(interactome.go_rna_unrelated.df[which(interactome.go_rna_unrelated.df$B %in% x), "count"])})
 
-# using interactome as background
-bkgd <- length(unique(interactome.keggIDs))
-smpl <- length(interactome.go_rna_unrelated.keggIDs)
-
+# using WCL as background
 ftl <- apply(interactome.go_rna_unrelated.B.df, 1, function (x) {
   ct <- as.integer(x["count"])
   tt <- as.integer(x["total"])
@@ -298,17 +294,16 @@ ftl <- apply(interactome.go_rna_unrelated.B.df, 1, function (x) {
 
 interactome.go_rna_unrelated.B.df$ft_pval <- unlist(lapply(ftl, function(x) {x$p.value}))
 interactome.go_rna_unrelated.B.df$ft_OR <- unlist(lapply(ftl, function(x) {x$estimate}))
-interactome.go_rna_unrelated.B.df$ft_fdr <- p.adjust(interactome.go_rna_unrelated.B.df$ft_pval, method = "fdr")
+interactome.go_rna_unrelated.B.df$ft_fdr <- p.adjust(interactome.go_rna_unrelated.B.df$ft_pval, method = "bonferroni", n = nrow(wcl.df))
 
 #-----------GO RNA related-------------------------------------------
-interactome.go_rna_related <- read.xls(xls = "/Users/u1001407/Dropbox/REM project-Sebastian/HL-1 interactome superset.xlsx", sheet = "Sheet1", as.is = T)
+interactome.go_rna_related <- read.xls(xls = "/Users/u1001407/Dropbox/REM project-Sebastian/HL-1 interactome superset.xlsx", sheet = "sheet 1", as.is = T)
 colnames(interactome.go_rna_related)[1:2] <- c("ensembl_gene_id", "gene_symbol")
 interactome.go_rna_related$GO <- as.factor(interactome.go_rna_related$GO)
 interactome.go_rna_related$RBD <- as.factor(interactome.go_rna_related$RBD)
 interactome.go_rna_related <- interactome.go_rna_related[-which(interactome.go_rna_related$GO == "unrelated"),]
 
 entrez_ids <- getBM(attributes = c("ensembl_gene_id","entrezgene"), values = interactome.go_rna_related[,"ensembl_gene_id"], filters = "ensembl_gene_id", mart = mouse)
-interactome.go_rna_related.human_homologs <- getBM(attributes = c("ensembl_gene_id","hsapiens_homolog_ensembl_gene"), values = interactome.go_rna_related[,"ensembl_gene_id"], filters = "ensembl_gene_id", mart = mouse)
 
 # remove ensembl_gene_ids which have duplicated entrez_ids
 entrez_ids <- entrez_ids[-which(duplicated(entrez_ids$ensembl_gene_id)),]
@@ -316,12 +311,13 @@ interactome.go_rna_related <- merge(interactome.go_rna_related, entrez_ids, by.x
 interactome.go_rna_related.entrezIDs <- unique(interactome.go_rna_related[!is.na(interactome.go_rna_related$entrezgene),]$entrezgene)
 interactome.go_rna_related.keggIDs <- keggConv.batch(interactome.go_rna_related.entrezIDs)
 
+# we are testing this subset of "interactome", therefore we include all the pathways from "interactome"
 interactome.go_rna_related.df <- interactome.df
 # TODO - make sure that same background is used in all tests!!!
 # we are now using interactome as background to test for enrichment
-i1 <- intersect(rownames(interactome.go_rna_related.df), rownames(interactome.df))
+i1 <- intersect(rownames(interactome.go_rna_related.df), rownames(wcl.df))
 interactome.go_rna_related.df$total <- rep(0, nrow(interactome.go_rna_related.df))
-interactome.go_rna_related.df[i1,]$total <- interactome.df[i1,]$count
+interactome.go_rna_related.df[i1,]$total <- wcl.df[i1,]$count
 interactome.go_rna_related.df$source <- rep("GO_RNA_related", nrow(interactome.go_rna_related.df))
 interactome.go_rna_related.df$ID <- rownames(interactome.go_rna_related.df)
 interactome.go_rna_related.df$count <- rep(0, nrow(interactome.go_rna_related.df))
@@ -333,7 +329,8 @@ for (i in rownames(interactome.go_rna_related.df)) {
 }
 
 # perform Fisher's Exact Test for each category
-bkgd <- length(unique(interactome.keggIDs))
+# Using WCL as background
+bkgd <- length(unique(wcl.keggIDs))
 smpl <- length(interactome.go_rna_related.keggIDs)
 
 ftl <- apply(interactome.go_rna_related.df, 1, function (x) {
@@ -345,7 +342,8 @@ ftl <- apply(interactome.go_rna_related.df, 1, function (x) {
 
 interactome.go_rna_related.df$ft_pval <- unlist(lapply(ftl, function(x) {x$p.value}))
 interactome.go_rna_related.df$ft_OR <- unlist(lapply(ftl, function(x) {x$estimate}))
-interactome.go_rna_related.df$ft_fdr <- p.adjust(interactome.go_rna_related.df$ft_pval, method = "fdr")
+# changed p.adjust.method to "bonferroni" for more conservative control of p values, and set number to number of pathways in WCL
+interactome.go_rna_related.df$ft_fdr <- p.adjust(interactome.go_rna_related.df$ft_pval, method = "bonferroni", n = nrow(wcl.df))
 
 # summarizing data at "B" level before doing Fisher's Exact test
 interactome.go_rna_related.B.df <- data.frame(matrix(ncol = 5, nrow = length(unique(interactome.go_rna_related.df$B))))
@@ -356,9 +354,6 @@ interactome.go_rna_related.B.df$source <- rep("GO_RNA_related", nrow(interactome
 interactome.go_rna_related.B.df$total <- sapply(unique(interactome.go_rna_related.df$B), function(x) {tot <- sum(interactome.go_rna_related.df[which(interactome.go_rna_related.df$B %in% x), "total"])})
 interactome.go_rna_related.B.df$count <- sapply(unique(interactome.go_rna_related.df$B), function(x) {count <- sum(interactome.go_rna_related.df[which(interactome.go_rna_related.df$B %in% x), "count"])})
 
-bkgd <- length(unique(interactome.keggIDs))
-smpl <- length(interactome.go_rna_related.keggIDs)
-
 ftl <- apply(interactome.go_rna_related.B.df, 1, function (x) {
   ct <- as.integer(x["count"])
   tt <- as.integer(x["total"])
@@ -368,185 +363,65 @@ ftl <- apply(interactome.go_rna_related.B.df, 1, function (x) {
 
 interactome.go_rna_related.B.df$ft_pval <- unlist(lapply(ftl, function(x) {x$p.value}))
 interactome.go_rna_related.B.df$ft_OR <- unlist(lapply(ftl, function(x) {x$estimate}))
-interactome.go_rna_related.B.df$ft_fdr <- p.adjust(interactome.go_rna_related.B.df$ft_pval, method = "fdr")
-
-#-----------unrecognized RBPs-------------------------
-interactome.unrecognized.rbp <- read.xls(xls = "/Users/u1001407/Dropbox/REM project-Sebastian/HL-1 interactome superset.xlsx", sheet = "Sheet1", as.is = T)
-colnames(interactome.unrecognized.rbp)[1:2] <- c("ensembl_gene_id", "gene_symbol")
-interactome.unrecognized.rbp$GO <- as.factor(interactome.unrecognized.rbp$GO)
-interactome.unrecognized.rbp$RBD <- as.factor(interactome.unrecognized.rbp$RBD)
-# tidying up category names
-interactome.unrecognized.rbp[which(interactome.unrecognized.rbp$RBD == "Classical RBD"),]$RBD <- rep("classical RBD", length(which(interactome.unrecognized.rbp$RBD == "Classical RBD")))
-interactome.unrecognized.rbp[which(interactome.unrecognized.rbp$RBD == "Non-Canonical RBD"),]$RBD <- rep("non classical RBD", length(which(interactome.unrecognized.rbp$RBD == "Non-Canonical RBD")))
-interactome.unrecognized.rbp$RBD <- as.factor(as.character(interactome.unrecognized.rbp$RBD))
-interactome.unrecognized.rbp <- interactome.unrecognized.rbp[which(interactome.unrecognized.rbp$RBD %in% c("unknown RBD")),]
-
-entrez_ids <- getBM(attributes = c("ensembl_gene_id","entrezgene"), values = interactome.unrecognized.rbp[,"ensembl_gene_id"], filters = "ensembl_gene_id", mart = mouse)
-interactome.unrecognized.rbp.human_homologs <- getBM(attributes = c("ensembl_gene_id","hsapiens_homolog_ensembl_gene"), values = interactome.unrecognized.rbp[,"ensembl_gene_id"], filters = "ensembl_gene_id", mart = mouse)
-
-# remove ensembl_gene_ids which have duplicated entrez_ids
-entrez_ids <- entrez_ids[-which(duplicated(entrez_ids$ensembl_gene_id)),]
-interactome.unrecognized.rbp <- merge(interactome.unrecognized.rbp, entrez_ids, by.x = "ensembl_gene_id", by.y = "ensembl_gene_id", all.x = T)
-interactome.unrecognized.rbp.entrezIDs <- unique(interactome.unrecognized.rbp[!is.na(interactome.unrecognized.rbp$entrezgene),]$entrezgene)
-interactome.unrecognized.rbp.keggIDs <- keggConv.batch(interactome.unrecognized.rbp.entrezIDs)
-
-interactome.unrecognized.rbp.df <- interactome.df
-
-# we are now using WCL as background to test for enrichment
-i1 <- intersect(rownames(interactome.unrecognized.rbp.df), rownames(wcl.df))
-interactome.unrecognized.rbp.df$total <- rep(0, nrow(interactome.unrecognized.rbp.df))
-interactome.unrecognized.rbp.df[i1,]$total <- wcl.df[i1,]$count
-interactome.unrecognized.rbp.df$source <- rep("RBD_unrecognized", nrow(interactome.unrecognized.rbp.df))
-interactome.unrecognized.rbp.df$ID <- rownames(interactome.unrecognized.rbp.df)
-interactome.unrecognized.rbp.df$count <- rep(0, nrow(interactome.unrecognized.rbp.df))
-interactome.unrecognized.rbp.df$frac <- rep(0, nrow(interactome.unrecognized.rbp.df))
-
-for (i in rownames(interactome.unrecognized.rbp.df)) {
-  kL1 <- keggLink("mmu", paste("mmu", i, sep = ""))
-  interactome.unrecognized.rbp.df[i, ]$count <- length(which(interactome.unrecognized.rbp.keggIDs %in% kL1))
-}
-
-# perform Fisher's Exact Test for each category
-bkgd <- length(unique(interactome.keggIDs))
-smpl <- length(interactome.unrecognized.rbp.keggIDs)
-ftl <- apply(interactome.unrecognized.rbp.df, 1, function (x) {
-  ct <- as.integer(x["count"])
-  tt <- as.integer(x["total"])
-  m1 <- matrix(c(ct, tt, smpl - ct, bkgd - tt), 2, 2)
-  fisher.test(m1, alternative = "two.sided")
-})
-interactome.unrecognized.rbp.df$ft_pval <- unlist(lapply(ftl, function(x) {x$p.value}))
-interactome.unrecognized.rbp.df$ft_OR <- unlist(lapply(ftl, function(x) {x$estimate}))
-interactome.unrecognized.rbp.df$ft_fdr <- p.adjust(interactome.unrecognized.rbp.df$ft_pval, method = "fdr")
-
-# summarizing data at "B" level before doing Fisher's Exact test
-interactome.unrecognized.rbp.B.df <- data.frame(matrix(ncol = 5, nrow = length(unique(interactome.unrecognized.rbp.df$B))))
-colnames(interactome.unrecognized.rbp.B.df) <- c("B", "A", "total", "count", "source")
-interactome.unrecognized.rbp.B.df$B <- unique(interactome.unrecognized.rbp.df$B)
-interactome.unrecognized.rbp.B.df$A <- sapply(unique(interactome.unrecognized.rbp.df$B), function(x) {A <- unique(interactome.unrecognized.rbp.df[which(interactome.unrecognized.rbp.df$B %in% x), "A"])})
-interactome.unrecognized.rbp.B.df$source <- rep("RBD_unrecognized", nrow(interactome.unrecognized.rbp.B.df))
-interactome.unrecognized.rbp.B.df$total <- sapply(unique(interactome.unrecognized.rbp.df$B), function(x) {tot <- sum(interactome.unrecognized.rbp.df[which(interactome.unrecognized.rbp.df$B %in% x), "total"])})
-interactome.unrecognized.rbp.B.df$count <- sapply(unique(interactome.unrecognized.rbp.df$B), function(x) {count <- sum(interactome.unrecognized.rbp.df[which(interactome.unrecognized.rbp.df$B %in% x), "count"])})
-
-bkgd <- length(unique(interactome.keggIDs))
-smpl <- length(interactome.unrecognized.rbp.keggIDs)
-ftl <- apply(interactome.unrecognized.rbp.B.df, 1, function (x) {
-  ct <- as.integer(x["count"])
-  tt <- as.integer(x["total"])
-  m1 <- matrix(c(ct, tt, smpl - ct, bkgd - tt), 2, 2)
-  fisher.test(m1, alternative = "two.sided")
-})
-
-interactome.unrecognized.rbp.B.df$ft_pval <- unlist(lapply(ftl, function(x) {x$p.value}))
-interactome.unrecognized.rbp.B.df$ft_OR <- unlist(lapply(ftl, function(x) {x$estimate}))
-interactome.unrecognized.rbp.B.df$ft_fdr <- p.adjust(interactome.unrecognized.rbp.B.df$ft_pval, method = "fdr")
-
-#-----------recognized RBPs-------------------------
-interactome.recognized.rbp <- read.xls(xls = "/Users/u1001407/Dropbox/REM project-Sebastian/HL-1 interactome superset.xlsx", sheet = "sheet 1", as.is = T)
-colnames(interactome.recognized.rbp)[1:2] <- c("ensembl_gene_id", "gene_symbol")
-interactome.recognized.rbp$GO <- as.factor(interactome.recognized.rbp$GO)
-interactome.recognized.rbp$RBD <- as.factor(interactome.recognized.rbp$RBD)
-# tidying up category names
-interactome.recognized.rbp[which(interactome.recognized.rbp$RBD == "Classical RBD"),]$RBD <- rep("classical RBD", length(which(interactome.recognized.rbp$RBD == "Classical RBD")))
-interactome.recognized.rbp[which(interactome.recognized.rbp$RBD == "Non-Canonical RBD"),]$RBD <- rep("non classical RBD", length(which(interactome.recognized.rbp$RBD == "Non-Canonical RBD")))
-interactome.recognized.rbp$RBD <- as.factor(as.character(interactome.recognized.rbp$RBD))
-interactome.recognized.rbp <- interactome.recognized.rbp[-which(interactome.recognized.rbp$RBD %in% c("unknown RBD")),]
-
-entrez_ids <- getBM(attributes = c("ensembl_gene_id","entrezgene"), values = interactome.recognized.rbp[,"ensembl_gene_id"], filters = "ensembl_gene_id", mart = mouse)
-interactome.recognized.rbp.human_homologs <- getBM(attributes = c("ensembl_gene_id","hsapiens_homolog_ensembl_gene"), values = interactome.recognized.rbp[,"ensembl_gene_id"], filters = "ensembl_gene_id", mart = mouse)
-
-# remove ensembl_gene_ids which have duplicated entrez_ids
-entrez_ids <- entrez_ids[-which(duplicated(entrez_ids$ensembl_gene_id)),]
-interactome.recognized.rbp <- merge(interactome.recognized.rbp, entrez_ids, by.x = "ensembl_gene_id", by.y = "ensembl_gene_id", all.x = T)
-interactome.recognized.rbp.entrezIDs <- unique(interactome.recognized.rbp[!is.na(interactome.recognized.rbp$entrezgene),]$entrezgene)
-interactome.recognized.rbp.keggIDs <- keggConv.batch(interactome.recognized.rbp.entrezIDs)
-
-# to test for every pathway that has been found in the interactome dataset we use that data to test against
-interactome.recognized.rbp.df <- interactome.df
-# we are now using WCL as background to test for enrichment
-i1 <- intersect(rownames(interactome.recognized.rbp.df), rownames(wcl.df))
-interactome.recognized.rbp.df$total <- rep(0, nrow(interactome.recognized.rbp.df))
-interactome.recognized.rbp.df[i1,]$total <- wcl.df[i1,]$count
-interactome.recognized.rbp.df$source <- rep("RBD_recognized", nrow(interactome.recognized.rbp.df))
-interactome.recognized.rbp.df$ID <- rownames(interactome.recognized.rbp.df)
-interactome.recognized.rbp.df$count <- rep(0, nrow(interactome.recognized.rbp.df))
-interactome.recognized.rbp.df$frac <- rep(0, nrow(interactome.recognized.rbp.df))
-
-for (i in rownames(interactome.recognized.rbp.df)) {
-  kL1 <- keggLink("mmu", paste("mmu", i, sep = ""))
-  interactome.recognized.rbp.df[i, ]$count <- length(which(interactome.recognized.rbp.keggIDs %in% kL1))
-}
-
-# perform Fisher's Exact Test for each category
-bkgd <- length(unique(interactome.keggIDs))
-smpl <- length(interactome.recognized.rbp.keggIDs)
-ftl <- apply(interactome.recognized.rbp.df, 1, function (x) {
-  ct <- as.integer(x["count"])
-  tt <- as.integer(x["total"])
-  fisher.test(matrix(c(ct, tt - ct, smpl - ct, bkgd - tt - smpl + ct), 2, 2), alternative = "two.sided")
-})
-interactome.recognized.rbp.df$ft_pval <- unlist(lapply(ftl, function(x) {x$p.value}))
-interactome.recognized.rbp.df$ft_OR <- unlist(lapply(ftl, function(x) {x$estimate}))
-interactome.recognized.rbp.df$ft_fdr <- p.adjust(interactome.recognized.rbp.df$ft_pval, method = "fdr")
-
-# summarizing data at "B" level before doing Fisher's Exact test
-interactome.recognized.rbp.B.df <- data.frame(matrix(ncol = 5, nrow = length(unique(interactome.recognized.rbp.df$B))))
-colnames(interactome.recognized.rbp.B.df) <- c("B", "A", "total", "count", "source")
-interactome.recognized.rbp.B.df$B <- unique(interactome.recognized.rbp.df$B)
-interactome.recognized.rbp.B.df$A <- sapply(unique(interactome.recognized.rbp.df$B), function(x) {A <- unique(interactome.recognized.rbp.df[which(interactome.recognized.rbp.df$B %in% x), "A"])})
-interactome.recognized.rbp.B.df$source <- rep("RBD_recognized", nrow(interactome.recognized.rbp.B.df))
-interactome.recognized.rbp.B.df$total <- sapply(unique(interactome.recognized.rbp.df$B), function(x) {tot <- sum(interactome.recognized.rbp.df[which(interactome.recognized.rbp.df$B %in% x), "total"])})
-interactome.recognized.rbp.B.df$count <- sapply(unique(interactome.recognized.rbp.df$B), function(x) {count <- sum(interactome.recognized.rbp.df[which(interactome.recognized.rbp.df$B %in% x), "count"])})
-
-bkgd <- length(unique(interactome.keggIDs))
-smpl <- length(interactome.recognized.rbp.keggIDs)
-ftl <- apply(interactome.recognized.rbp.B.df, 1, function (x) {
-  ct <- as.integer(x["count"])
-  tt <- as.integer(x["total"])
-  fisher.test(matrix(c(ct, tt, smpl - ct, bkgd - tt), 2, 2), alternative = "two.sided")
-})
-interactome.recognized.rbp.B.df$ft_pval <- unlist(lapply(ftl, function(x) {x$p.value}))
-interactome.recognized.rbp.B.df$ft_OR <- unlist(lapply(ftl, function(x) {x$estimate}))
-interactome.recognized.rbp.B.df$ft_fdr <- p.adjust(interactome.recognized.rbp.B.df$ft_pval, method = "fdr")
+# changed p.adjust.method to "bonferroni" for more conservative control of p values, and set number to number of pathways in WCL
+interactome.go_rna_related.B.df$ft_fdr <- p.adjust(interactome.go_rna_related.B.df$ft_pval, method = "bonferroni", n = nrow(wcl.df))
 
 #-----------plotting of KEGG enrichment analysis results---------------------------------
 df1 <- rbind(interactome.B.df[, c("A", "B", "ft_OR", "ft_fdr", "source")],
              interactome.go_rna_related.B.df[, c("A", "B", "ft_OR", "ft_fdr", "source")], 
-             interactome.go_rna_unrelated.B.df[, c("A", "B", "ft_OR", "ft_fdr", "source")],
-             interactome.unrecognized.rbp.B.df[, c("A", "B", "ft_OR", "ft_fdr", "source")],
-             interactome.recognized.rbp.B.df[, c("A", "B", "ft_OR", "ft_fdr", "source")])
+             interactome.go_rna_unrelated.B.df[, c("A", "B", "ft_OR", "ft_fdr", "source")]
+             )
 
 df1$source <- as.factor(df1$source)
-df1$source <- factor(df1$source, levels = levels(df1$source)[c(3,1,2,4,5)])
+df1$source <- factor(df1$source, levels = levels(df1$source)[c(3,1,2)])
 
-df1$B <- as.factor(df1$B)
-df1$B <- factor(df1$B, levels = levels(df1$B)[h1$rowInd])
+df1$ft_OR.cut <- cut(log2(df1$ft_OR), breaks = c(-Inf,-4:4), right = F)
 
-p3 <- ggplot(df1, aes(B, source)) + geom_tile(aes(fill = log2(df1$ft_OR)))
+p3 <- ggplot(df1, aes(B, source)) + geom_tile(aes(fill = (df1$ft_OR.cut)))
 p3 <- p3 + theme(axis.text.x = element_text(angle = 90))
 p3 <- p3 + scale_fill_gradientn(colours= c("red", "green"))
-p3 + facet_grid(A ~ B)
+p3
 
-# subsetting for FDR <= 0.05
-c1 <- as.character(df1[df1$source == "Interactome",][which(df1[df1$source == "Interactome",]$ft_fdr <= 0.05),]$B)
+# subsetting for FDR <= 0.025
+c1 <- unique(as.character(df1[which(df1$ft_fdr <= 0.025),]$B))
 df2 <- df1[which(df1$B %in% c1),]
+df2$B <- as.factor(as.character(df2$B))
+df2$ft_OR.cut <- cut(log2(df2$ft_OR), breaks = c(-Inf,-4:4), right = F)
+df2$B <- factor(df2$B, levels = levels(df2$B)[df2[df2$source == "Interactome", "B"][order(df2[which(df2$source == "Interactome"),]$ft_OR.cut)]])
+ggplot(data = df2, aes(x = source, y = B)) + geom_tile(aes(fill = ft_OR.cut), colour = "white") + scale_fill_brewer(palette = "PRGn") + theme(axis.text.x = element_text(angle = 90))
 
 # subsetting Metabolism and Genetic Information Processing
 df.metab <- df1[df1$A == "Metabolism",]
 df.gip <- df1[df1$A == "Genetic information Processin",]
 df3 <- rbind(df.metab[which(df.metab$ft_fdr <= 0.1),], df.gip[df.gip$ft_fdr <= 0.05,])
 df3 <- rbind(df.metab, df.gip)
-p4 <- ggplot(df3, aes(source, B)) + geom_tile(aes(fill = log2(df3$ft_OR)))
+df3$B <- factor(df3$B, levels = levels(df3$B)[df2[df3$source == "Interactome", "B"][order(df2[which(df2$source == "Interactome"),]$ft_OR.cut)]])
+p4 <- ggplot(df3, aes(source, B)) + geom_tile(aes(fill = df3$ft_OR.cut))
 p4 <- p4 + theme(axis.text.x = element_text(angle = 90))
-p4 <- p4 + scale_fill_gradientn(colours= rainbow(3), na.value = "darkgrey")
+p4 <- p4 + scale_fill_brewer(palette = "PRGn") 
 p4
 
-# preparing matrix for clustering
-m1[df1[which(df1$source == "Interactome"),]$B, 1] <- df1[which(df1$source == "Interactome"),]$ft_OR
-m1[df1[which(df1$source == "GO_RNA_related"),]$B, 2] <- df1[which(df1$source == "GO_RNA_related"),]$ft_OR
-m1[df1[which(df1$source == "GO_RNA_unrelated"),]$B, 3] <- df1[which(df1$source == "GO_RNA_unrelated"),]$ft_OR
-m1[df1[which(df1$source == "RBD_recognized"),]$B, 4] <- df1[which(df1$source == "RBD_recognized"),]$ft_OR
-m1[df1[which(df1$source == "RBD_unrecognized"),]$B, 5] <- df1[which(df1$source == "RBD_unrecognized"),]$ft_OR
+# Plot at KEGG C level
+dfC <- rbind(interactome.df[, c("A", "B", "C", "ft_OR", "ft_fdr", "source")],
+             interactome.go_rna_related.df[, c("A", "B", "C", "ft_OR", "ft_fdr", "source")], 
+             interactome.go_rna_unrelated.df[, c("A", "B", "C", "ft_OR", "ft_fdr", "source")]
+)
+
+dfC$source <- as.factor(dfC$source)
+dfC$source <- factor(dfC$source, levels = levels(dfC$source)[c(3,1,2)])
+
+select1 <- unique(as.character(dfC[which(dfC$ft_fdr <= 0.10),]$C))
+dfC <- dfC[which(dfC$C %in% select1),]
+
+dfC$C <- as.factor(as.character(dfC$C))
+dfC$ft_OR.cut <- cut(log2(dfC$ft_OR), breaks = c(-Inf,-4:4), right = F)
+dfC$C <- factor(dfC$C, levels = levels(dfC$C)[dfC[dfC$source == "Interactome", "C"][order(dfC[which(dfC$source == "Interactome"),]$ft_OR.cut)]])
+ggplot(data = dfC, aes(x = source, y = C)) + geom_tile(aes(fill = ft_OR.cut), colour = "white") + scale_fill_brewer(palette = "PRGn") + theme(axis.text.x = element_text(angle = 90))
+
+#---------DAVID Analysis------------------------------
+david <- DAVIDWebService$new(email="sebastian.kurscheid@anu.edu.au")
+
+
 
 
 #-----------scratch Pad-------------------------------
@@ -1072,4 +947,145 @@ map.marketV2(id = hl1.df$ID,
              main = "HL-1 specific interactome\nKEGG pathway enrichment/depletion",
              lab = c(TRUE, FALSE))
 dev.off()
+
+
+#-----------unrecognized RBPs-------------------------
+interactome.unrecognized.rbp <- read.xls(xls = "/Users/u1001407/Dropbox/REM project-Sebastian/HL-1 interactome superset.xlsx", sheet = "Sheet1", as.is = T)
+colnames(interactome.unrecognized.rbp)[1:2] <- c("ensembl_gene_id", "gene_symbol")
+interactome.unrecognized.rbp$GO <- as.factor(interactome.unrecognized.rbp$GO)
+interactome.unrecognized.rbp$RBD <- as.factor(interactome.unrecognized.rbp$RBD)
+# tidying up category names
+interactome.unrecognized.rbp[which(interactome.unrecognized.rbp$RBD == "Classical RBD"),]$RBD <- rep("classical RBD", length(which(interactome.unrecognized.rbp$RBD == "Classical RBD")))
+interactome.unrecognized.rbp[which(interactome.unrecognized.rbp$RBD == "Non-Canonical RBD"),]$RBD <- rep("non classical RBD", length(which(interactome.unrecognized.rbp$RBD == "Non-Canonical RBD")))
+interactome.unrecognized.rbp$RBD <- as.factor(as.character(interactome.unrecognized.rbp$RBD))
+interactome.unrecognized.rbp <- interactome.unrecognized.rbp[which(interactome.unrecognized.rbp$RBD %in% c("unknown RBD")),]
+
+entrez_ids <- getBM(attributes = c("ensembl_gene_id","entrezgene"), values = interactome.unrecognized.rbp[,"ensembl_gene_id"], filters = "ensembl_gene_id", mart = mouse)
+interactome.unrecognized.rbp.human_homologs <- getBM(attributes = c("ensembl_gene_id","hsapiens_homolog_ensembl_gene"), values = interactome.unrecognized.rbp[,"ensembl_gene_id"], filters = "ensembl_gene_id", mart = mouse)
+
+# remove ensembl_gene_ids which have duplicated entrez_ids
+entrez_ids <- entrez_ids[-which(duplicated(entrez_ids$ensembl_gene_id)),]
+interactome.unrecognized.rbp <- merge(interactome.unrecognized.rbp, entrez_ids, by.x = "ensembl_gene_id", by.y = "ensembl_gene_id", all.x = T)
+interactome.unrecognized.rbp.entrezIDs <- unique(interactome.unrecognized.rbp[!is.na(interactome.unrecognized.rbp$entrezgene),]$entrezgene)
+interactome.unrecognized.rbp.keggIDs <- keggConv.batch(interactome.unrecognized.rbp.entrezIDs)
+
+interactome.unrecognized.rbp.df <- interactome.df
+
+# we are now using WCL as background to test for enrichment
+i1 <- intersect(rownames(interactome.unrecognized.rbp.df), rownames(wcl.df))
+interactome.unrecognized.rbp.df$total <- rep(0, nrow(interactome.unrecognized.rbp.df))
+interactome.unrecognized.rbp.df[i1,]$total <- wcl.df[i1,]$count
+interactome.unrecognized.rbp.df$source <- rep("RBD_unrecognized", nrow(interactome.unrecognized.rbp.df))
+interactome.unrecognized.rbp.df$ID <- rownames(interactome.unrecognized.rbp.df)
+interactome.unrecognized.rbp.df$count <- rep(0, nrow(interactome.unrecognized.rbp.df))
+interactome.unrecognized.rbp.df$frac <- rep(0, nrow(interactome.unrecognized.rbp.df))
+
+for (i in rownames(interactome.unrecognized.rbp.df)) {
+  kL1 <- keggLink("mmu", paste("mmu", i, sep = ""))
+  interactome.unrecognized.rbp.df[i, ]$count <- length(which(interactome.unrecognized.rbp.keggIDs %in% kL1))
+}
+
+# perform Fisher's Exact Test for each category
+# Using WCL as background
+bkgd <- length(unique(wcl.keggIDs))
+smpl <- length(interactome.unrecognized.rbp.keggIDs)
+ftl <- apply(interactome.unrecognized.rbp.df, 1, function (x) {
+  ct <- as.integer(x["count"])
+  tt <- as.integer(x["total"])
+  m1 <- matrix(c(ct, tt, smpl - ct, bkgd - tt), 2, 2)
+  fisher.test(m1, alternative = "two.sided")
+})
+interactome.unrecognized.rbp.df$ft_pval <- unlist(lapply(ftl, function(x) {x$p.value}))
+interactome.unrecognized.rbp.df$ft_OR <- unlist(lapply(ftl, function(x) {x$estimate}))
+interactome.unrecognized.rbp.df$ft_fdr <- p.adjust(interactome.unrecognized.rbp.df$ft_pval, method = "bonferroni", n = nrow(wcl.df))
+
+# summarizing data at "B" level before doing Fisher's Exact test
+interactome.unrecognized.rbp.B.df <- data.frame(matrix(ncol = 5, nrow = length(unique(interactome.unrecognized.rbp.df$B))))
+colnames(interactome.unrecognized.rbp.B.df) <- c("B", "A", "total", "count", "source")
+interactome.unrecognized.rbp.B.df$B <- unique(interactome.unrecognized.rbp.df$B)
+interactome.unrecognized.rbp.B.df$A <- sapply(unique(interactome.unrecognized.rbp.df$B), function(x) {A <- unique(interactome.unrecognized.rbp.df[which(interactome.unrecognized.rbp.df$B %in% x), "A"])})
+interactome.unrecognized.rbp.B.df$source <- rep("RBD_unrecognized", nrow(interactome.unrecognized.rbp.B.df))
+interactome.unrecognized.rbp.B.df$total <- sapply(unique(interactome.unrecognized.rbp.df$B), function(x) {tot <- sum(interactome.unrecognized.rbp.df[which(interactome.unrecognized.rbp.df$B %in% x), "total"])})
+interactome.unrecognized.rbp.B.df$count <- sapply(unique(interactome.unrecognized.rbp.df$B), function(x) {count <- sum(interactome.unrecognized.rbp.df[which(interactome.unrecognized.rbp.df$B %in% x), "count"])})
+
+ftl <- apply(interactome.unrecognized.rbp.B.df, 1, function (x) {
+  ct <- as.integer(x["count"])
+  tt <- as.integer(x["total"])
+  m1 <- matrix(c(ct, tt, smpl - ct, bkgd - tt), 2, 2)
+  fisher.test(m1, alternative = "two.sided")
+})
+
+interactome.unrecognized.rbp.B.df$ft_pval <- unlist(lapply(ftl, function(x) {x$p.value}))
+interactome.unrecognized.rbp.B.df$ft_OR <- unlist(lapply(ftl, function(x) {x$estimate}))
+interactome.unrecognized.rbp.B.df$ft_fdr <- p.adjust(interactome.unrecognized.rbp.B.df$ft_pval, method = "bonferroni", n = nrow(wcl.df))
+
+#-----------recognized RBPs-------------------------
+interactome.recognized.rbp <- read.xls(xls = "/Users/u1001407/Dropbox/REM project-Sebastian/HL-1 interactome superset.xlsx", sheet = "sheet 1", as.is = T)
+colnames(interactome.recognized.rbp)[1:2] <- c("ensembl_gene_id", "gene_symbol")
+interactome.recognized.rbp$GO <- as.factor(interactome.recognized.rbp$GO)
+interactome.recognized.rbp$RBD <- as.factor(interactome.recognized.rbp$RBD)
+# tidying up category names
+interactome.recognized.rbp[which(interactome.recognized.rbp$RBD == "Classical RBD"),]$RBD <- rep("classical RBD", length(which(interactome.recognized.rbp$RBD == "Classical RBD")))
+interactome.recognized.rbp[which(interactome.recognized.rbp$RBD == "Non-Canonical RBD"),]$RBD <- rep("non classical RBD", length(which(interactome.recognized.rbp$RBD == "Non-Canonical RBD")))
+interactome.recognized.rbp$RBD <- as.factor(as.character(interactome.recognized.rbp$RBD))
+interactome.recognized.rbp <- interactome.recognized.rbp[-which(interactome.recognized.rbp$RBD %in% c("unknown RBD")),]
+
+entrez_ids <- getBM(attributes = c("ensembl_gene_id","entrezgene"), values = interactome.recognized.rbp[,"ensembl_gene_id"], filters = "ensembl_gene_id", mart = mouse)
+interactome.recognized.rbp.human_homologs <- getBM(attributes = c("ensembl_gene_id","hsapiens_homolog_ensembl_gene"), values = interactome.recognized.rbp[,"ensembl_gene_id"], filters = "ensembl_gene_id", mart = mouse)
+
+# remove ensembl_gene_ids which have duplicated entrez_ids
+entrez_ids <- entrez_ids[-which(duplicated(entrez_ids$ensembl_gene_id)),]
+interactome.recognized.rbp <- merge(interactome.recognized.rbp, entrez_ids, by.x = "ensembl_gene_id", by.y = "ensembl_gene_id", all.x = T)
+interactome.recognized.rbp.entrezIDs <- unique(interactome.recognized.rbp[!is.na(interactome.recognized.rbp$entrezgene),]$entrezgene)
+interactome.recognized.rbp.keggIDs <- keggConv.batch(interactome.recognized.rbp.entrezIDs)
+
+# to test for every pathway that has been found in the interactome dataset we use that data to test against
+interactome.recognized.rbp.df <- interactome.df
+# we are now using WCL as background to test for enrichment
+i1 <- intersect(rownames(interactome.recognized.rbp.df), rownames(wcl.df))
+interactome.recognized.rbp.df$total <- rep(0, nrow(interactome.recognized.rbp.df))
+interactome.recognized.rbp.df[i1,]$total <- wcl.df[i1,]$count
+interactome.recognized.rbp.df$source <- rep("RBD_recognized", nrow(interactome.recognized.rbp.df))
+interactome.recognized.rbp.df$ID <- rownames(interactome.recognized.rbp.df)
+interactome.recognized.rbp.df$count <- rep(0, nrow(interactome.recognized.rbp.df))
+interactome.recognized.rbp.df$frac <- rep(0, nrow(interactome.recognized.rbp.df))
+
+for (i in rownames(interactome.recognized.rbp.df)) {
+  kL1 <- keggLink("mmu", paste("mmu", i, sep = ""))
+  interactome.recognized.rbp.df[i, ]$count <- length(which(interactome.recognized.rbp.keggIDs %in% kL1))
+}
+
+# perform Fisher's Exact Test for each category
+# Using WCL as background
+bkgd <- length(unique(wcl.keggIDs))
+smpl <- length(interactome.recognized.rbp.keggIDs)
+ftl <- apply(interactome.recognized.rbp.df, 1, function (x) {
+  ct <- as.integer(x["count"])
+  m1 <- matrix(c(ct, tt, smpl - ct, bkgd - tt), 2, 2)
+  fisher.test(m1, alternative = "two.sided")
+})
+interactome.recognized.rbp.df$ft_pval <- unlist(lapply(ftl, function(x) {x$p.value}))
+interactome.recognized.rbp.df$ft_OR <- unlist(lapply(ftl, function(x) {x$estimate}))
+interactome.recognized.rbp.df$ft_fdr <- p.adjust(interactome.recognized.rbp.df$ft_pval, method = "bonferroni", n = nrow(wcl.df))
+
+# summarizing data at "B" level before doing Fisher's Exact test
+interactome.recognized.rbp.B.df <- data.frame(matrix(ncol = 5, nrow = length(unique(interactome.recognized.rbp.df$B))))
+colnames(interactome.recognized.rbp.B.df) <- c("B", "A", "total", "count", "source")
+interactome.recognized.rbp.B.df$B <- unique(interactome.recognized.rbp.df$B)
+interactome.recognized.rbp.B.df$A <- sapply(unique(interactome.recognized.rbp.df$B), function(x) {A <- unique(interactome.recognized.rbp.df[which(interactome.recognized.rbp.df$B %in% x), "A"])})
+interactome.recognized.rbp.B.df$source <- rep("RBD_recognized", nrow(interactome.recognized.rbp.B.df))
+interactome.recognized.rbp.B.df$total <- sapply(unique(interactome.recognized.rbp.df$B), function(x) {tot <- sum(interactome.recognized.rbp.df[which(interactome.recognized.rbp.df$B %in% x), "total"])})
+interactome.recognized.rbp.B.df$count <- sapply(unique(interactome.recognized.rbp.df$B), function(x) {count <- sum(interactome.recognized.rbp.df[which(interactome.recognized.rbp.df$B %in% x), "count"])})
+
+smpl <- length(interactome.recognized.rbp.keggIDs)
+ftl <- apply(interactome.recognized.rbp.B.df, 1, function (x) {
+  ct <- as.integer(x["count"])
+  tt <- as.integer(x["total"])
+  m1 <- matrix(c(ct, tt, smpl - ct, bkgd - tt), 2, 2)
+  fisher.test(m1, alternative = "two.sided")
+})
+interactome.recognized.rbp.B.df$ft_pval <- unlist(lapply(ftl, function(x) {x$p.value}))
+interactome.recognized.rbp.B.df$ft_OR <- unlist(lapply(ftl, function(x) {x$estimate}))
+interactome.recognized.rbp.B.df$ft_fdr <- p.adjust(interactome.recognized.rbp.B.df$ft_pval, method = "bonferroni", n = nrow(wcl.df))
+
 
