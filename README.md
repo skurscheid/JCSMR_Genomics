@@ -1,1 +1,2 @@
 # JCSMR_Genomics
+Collection of R scripts and repository for ongoing research activities. These scripts are highly project specific and NOT intended for re-used outside their current context. This repository serves as a platform for #openscience and as an illustration of the scientific and development process of these projects. At time of publication/finalization the relevant scripts will be moved into a new branch and declared "safe for re-use".

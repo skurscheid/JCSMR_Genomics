@@ -54,10 +54,13 @@ keggConv.batch <- function(x, max = 100, org = "mmu", id.type = "ncbi-geneid") {
   }
 } # TODO: edit parameters for function call 
 
+#---------global variables----------------------------------------
+# for Fisher's Exact test
+# can be "greater", "less", or "two.sided"
+alternative = "greater"
+p.adjust.method = "fdr"
 
-#-------------------------------------------------------------------------------------------------------------
-# use ENSEMBL biomaRt for annotation data
-#-------------------------------------------------------------------------------------------------------------
+#---------use ENSEMBL biomaRt for annotation data-----------------
 mouse <- useMart("ensembl", dataset = "mmusculus_gene_ensembl")
 human <- useMart("ensembl", dataset = "hsapiens_gene_ensembl")
 # list available filters
@@ -104,6 +107,14 @@ for (i in rownames(wcl.df)) {
   wcl.df[i, ]$frac <- round(length(which(wcl.keggIDs %in% kL1)) / length(kL1) * 100, 2)
 }
 
+# extract list of IDs in pathway
+wcl.in_path.IDs <- lapply(rownames(wcl.df), function(x) {
+  kL1 <- keggLink("mmu", paste("mmu", x, sep = ""))
+  in_path <- wcl.keggIDs[which(wcl.keggIDs %in% kL1)]
+})
+
+names(wcl.in_path.IDs) <- rownames(wcl.df)
+
 # perform Fisher's Exact Test for each category
 bkgd <- length(unique(total.keggIDs))
 smpl <- length(wcl.keggIDs)
@@ -111,32 +122,14 @@ ftl <- apply(wcl.df[1,], 1, function (x) {
   ct <- as.integer(x["count"])
   tt <- as.integer(x["total"])
   m1 <- matrix(c(ct, tt, smpl - ct, bkgd - tt), 2, 2)
-  fisher.test(m1, alternative = "two.sided")
+  fisher.test(m1, alternative = alternative)
 })
 
 wcl.df$ft_pval <- unlist(lapply(ftl, function(x) {x$p.value}))
 wcl.df$ft_OR <- unlist(lapply(ftl, function(x) {x$estimate}))
 wcl.df$ft_fdr <- p.adjust(wcl.df$ft_pval, method = "fdr")
 
-map.marketV2(id = wcl.df$ID,
-             area = wcl.df$count,
-             group = wcl.df$B,
-             color = log(wcl.df$ft_OR),
-             main = "WCL proteome\nKEGG pathway enrichment/depletion",
-             lab = c(TRUE, FALSE))
-
-# rectangular tree map of top level KEGG categories
-pdf("/Users/u1001407/Dropbox//REM project-Sebastian/KEGG Analysis Figures/KEGG_toplevel_wcl.pdf", width = 15, height = 10)
-map.marketV2(id = wcl.df$ID,
-             area = wcl.df$total,
-             group = wcl.df$A,
-             color = log2(wcl.df$ft_OR),
-             main = "WCL proteome\nKEGG pathway enrichment/depletion",
-             lab = c(TRUE, FALSE))
-dev.off()
-
 #-----------total interactome----------------------------------------------------------------------------------------------------------
-# 
 interactome <- read.xls("/Users/u1001407/Dropbox/REM project-Sebastian/HL-1 interactome superset.xlsx", sheet = "Sheet1" , as.is = T)
 colnames(interactome)[c(1,2)] <- c("ensembl_gene_id", "gene_symbol")
 
@@ -156,6 +149,8 @@ interactome.pathways <- unique(unlist(lapply(strsplit(names(unlist(lapply(keggQ,
 interactome.pathways.genes <- lapply(interactome.pathways, function(x) keggLink("genes", x))
 names(interactome.pathways.genes) <- interactome.pathways
 interactome.pathways.genes.entrez_ids <- unique(gsub("mmu:", "", as.character(unlist(interactome.pathways.genes))))
+
+# create dataframe for counting hits in pathways
 interactome.df <- kegg.brite[gsub("mmu", "", interactome.pathways), ]
 interactome.df$source <- rep("Interactome", nrow(interactome.df))
 interactome.df$ID <- rownames(interactome.df)
@@ -172,6 +167,12 @@ for (i in rownames(interactome.df)) {
   interactome.df[i, ]$frac <- round(length(which(interactome.keggIDs %in% kL1)) / length(kL1) * 100, 2)
 }
 
+# extract list of IDs in pathway
+interactome.in_path.IDs <- lapply(rownames(interactome.df), function(x) {
+  kL1 <- keggLink("mmu", paste("mmu", x, sep = ""))
+  in_path <- interactome.keggIDs[which(interactome.keggIDs %in% kL1)]
+})
+
 # perform Fisher's Exact Test for each category
 bkgd <- length(unique(wcl.keggIDs))
 smpl <- length(interactome.keggIDs)
@@ -180,12 +181,12 @@ ftl <- apply(interactome.df, 1, function (x) {
   ct <- as.integer(x["count"])
   tt <- as.integer(x["total"])
   m1 <- matrix(c(ct, tt, smpl - ct, bkgd - tt), 2, 2)
-  fisher.test(m1, alternative = "two.sided")
+  fisher.test(m1, alternative = alternative)
 })
 
 interactome.df$ft_pval <- unlist(lapply(ftl, function(x) {x$p.value}))
 interactome.df$ft_OR <- unlist(lapply(ftl, function(x) {x$estimate}))
-interactome.df$ft_fdr <- p.adjust(interactome.df$ft_pval, method = "bonferroni", n = nrow(wcl.df))
+interactome.df$ft_fdr <- p.adjust(interactome.df$ft_pval, method = p.adjust.method, n = nrow(wcl.df))
 
 #---------interactome-summarizing data at "B" level before doing Fisher's Exact test------
 interactome.B.df <- data.frame(matrix(ncol = 5, nrow = length(unique(interactome.df$B))))
@@ -203,30 +204,12 @@ ftl <- apply(interactome.B.df, 1, function (x) {
   ct <- as.integer(x["count"])
   tt <- as.integer(x["total"])
   m1 <- matrix(c(ct, tt, smpl - ct, bkgd - tt), 2, 2)
-  fisher.test(m1, alternative = "two.sided")
+  fisher.test(m1, alternative = alternative)
 })
 
 interactome.B.df$ft_pval <- unlist(lapply(ftl, function(x) {x$p.value}))
 interactome.B.df$ft_OR <- unlist(lapply(ftl, function(x) {x$estimate}))
-interactome.B.df$ft_fdr <- p.adjust(interactome.B.df$ft_pval, method = "bonferroni", n = nrow(wcl.df))
-
-# plotting
-map.marketV2(id = interactome.df$ID,
-           area = interactome.df$count,
-           group = interactome.df$B,
-           color = log2(interactome.df$ft_OR),
-           main = "Interactome\nKEGG pathway enrichment/depletion",
-           lab = c(TRUE, FALSE))
-
-# rectangular tree map of top level KEGG categories
-pdf("/Users/u1001407/Dropbox//REM project-Sebastian/KEGG Analysis Figures/KEGG_toplevel_interactome.pdf", width = 15, height = 10)
-map.marketV2(id = interactome.df$ID,
-             area = interactome.df$total,
-             group = interactome.df$A,
-             color = log2(interactome.df$ft_OR),
-             main = "Interactome\nKEGG pathway enrichment/depletion",
-             lab = c(TRUE, FALSE))
-dev.off()
+interactome.B.df$ft_fdr <- p.adjust(interactome.B.df$ft_pval, method = p.adjust.method, n = nrow(wcl.df))
 
 #-----------GO RNA unrelated-------------------------------------------
 interactome.go_rna_unrelated <- read.xls(xls = "/Users/u1001407/Dropbox/REM project-Sebastian/HL-1 interactome superset.xlsx", sheet = "sheet 1", as.is = T)
@@ -244,6 +227,7 @@ interactome.go_rna_unrelated <- merge(interactome.go_rna_unrelated, entrez_ids, 
 interactome.go_rna_unrelated.entrezIDs <- unique(interactome.go_rna_unrelated[!is.na(interactome.go_rna_unrelated$entrezgene),]$entrezgene)
 interactome.go_rna_unrelated.keggIDs <- keggConv.batch(interactome.go_rna_unrelated.entrezIDs)
 
+# dataframe for count data
 interactome.go_rna_unrelated.df <- interactome.df
 interactome.go_rna_unrelated.df$source <- rep("GO_RNA_unrelated", nrow(interactome.go_rna_unrelated.df))
 interactome.go_rna_unrelated.df$ID <- rownames(interactome.go_rna_unrelated.df)
@@ -259,6 +243,12 @@ for (i in rownames(interactome.go_rna_unrelated.df)) {
   interactome.go_rna_unrelated.df[i, ]$count <- length(which(interactome.go_rna_unrelated.keggIDs %in% kL1))
 }
 
+# extract list of IDs in pathway
+interactome.go_rna_unrelated.in_path.IDs <- lapply(rownames(interactome.go_rna_unrelated.df), function(x) {
+  kL1 <- keggLink("mmu", paste("mmu", x, sep = ""))
+  in_path <- interactome.go_rna_unrelated.keggIDs[which(interactome.go_rna_unrelated.keggIDs %in% kL1)]
+})
+
 # perform Fisher's Exact Test for each category
 # Using WCL as background
 bkgd <- length(unique(wcl.keggIDs))
@@ -268,12 +258,12 @@ ftl <- apply(interactome.go_rna_unrelated.df, 1, function (x) {
   ct <- as.integer(x["count"])
   tt <- as.integer(x["total"])
   m1 <- matrix(c(ct, tt, smpl - ct, bkgd - tt), 2, 2)
-  fisher.test(m1, alternative = "two.sided")
+  fisher.test(m1, alternative = alternative)
 })
 
 interactome.go_rna_unrelated.df$ft_pval <- unlist(lapply(ftl, function(x) {x$p.value}))
 interactome.go_rna_unrelated.df$ft_OR <- unlist(lapply(ftl, function(x) {x$estimate}))
-interactome.go_rna_unrelated.df$ft_fdr <- p.adjust(interactome.go_rna_unrelated.df$ft_pval, method = "bonferroni", n = nrow(wcl.df))
+interactome.go_rna_unrelated.df$ft_fdr <- p.adjust(interactome.go_rna_unrelated.df$ft_pval, method = p.adjust.method, n = nrow(wcl.df))
 
 # summarizing data at "B" level before doing Fisher's Exact test
 interactome.go_rna_unrelated.B.df <- data.frame(matrix(ncol = 5, nrow = length(unique(interactome.go_rna_unrelated.df$B))))
@@ -289,12 +279,12 @@ ftl <- apply(interactome.go_rna_unrelated.B.df, 1, function (x) {
   ct <- as.integer(x["count"])
   tt <- as.integer(x["total"])
   m1 <- matrix(c(ct, tt, smpl - ct, bkgd - tt), 2, 2)
-  fisher.test(m1, alternative = "two.sided")
+  fisher.test(m1, alternative = alternative)
 })
 
 interactome.go_rna_unrelated.B.df$ft_pval <- unlist(lapply(ftl, function(x) {x$p.value}))
 interactome.go_rna_unrelated.B.df$ft_OR <- unlist(lapply(ftl, function(x) {x$estimate}))
-interactome.go_rna_unrelated.B.df$ft_fdr <- p.adjust(interactome.go_rna_unrelated.B.df$ft_pval, method = "bonferroni", n = nrow(wcl.df))
+interactome.go_rna_unrelated.B.df$ft_fdr <- p.adjust(interactome.go_rna_unrelated.B.df$ft_pval, method = p.adjust.method, n = nrow(wcl.df))
 
 #-----------GO RNA related-------------------------------------------
 interactome.go_rna_related <- read.xls(xls = "/Users/u1001407/Dropbox/REM project-Sebastian/HL-1 interactome superset.xlsx", sheet = "sheet 1", as.is = T)
@@ -328,6 +318,12 @@ for (i in rownames(interactome.go_rna_related.df)) {
   interactome.go_rna_related.df[i, ]$count <- length(which(interactome.go_rna_related.keggIDs %in% kL1))
 }
 
+# extract list of IDs in pathway
+interactome.go_rna_related.in_path.IDs <- lapply(rownames(interactome.go_rna_related.df), function(x) {
+  kL1 <- keggLink("mmu", paste("mmu", x, sep = ""))
+  in_path <- interactome.go_rna_related.keggIDs[which(interactome.go_rna_related.keggIDs %in% kL1)]
+})
+
 # perform Fisher's Exact Test for each category
 # Using WCL as background
 bkgd <- length(unique(wcl.keggIDs))
@@ -337,13 +333,13 @@ ftl <- apply(interactome.go_rna_related.df, 1, function (x) {
   ct <- as.integer(x["count"])
   tt <- as.integer(x["total"])
   m1 <- matrix(c(ct, tt, smpl - ct, bkgd - tt), 2, 2)
-  fisher.test(m1, alternative = "two.sided")
+  fisher.test(m1, alternative = alternative)
 })
 
 interactome.go_rna_related.df$ft_pval <- unlist(lapply(ftl, function(x) {x$p.value}))
 interactome.go_rna_related.df$ft_OR <- unlist(lapply(ftl, function(x) {x$estimate}))
-# changed p.adjust.method to "bonferroni" for more conservative control of p values, and set number to number of pathways in WCL
-interactome.go_rna_related.df$ft_fdr <- p.adjust(interactome.go_rna_related.df$ft_pval, method = "bonferroni", n = nrow(wcl.df))
+# changed p.adjust.method to "p.adjust.method" for more conservative control of p values, and set number to number of pathways in WCL
+interactome.go_rna_related.df$ft_fdr <- p.adjust(interactome.go_rna_related.df$ft_pval, method = p.adjust.method, n = nrow(wcl.df))
 
 # summarizing data at "B" level before doing Fisher's Exact test
 interactome.go_rna_related.B.df <- data.frame(matrix(ncol = 5, nrow = length(unique(interactome.go_rna_related.df$B))))
@@ -358,13 +354,13 @@ ftl <- apply(interactome.go_rna_related.B.df, 1, function (x) {
   ct <- as.integer(x["count"])
   tt <- as.integer(x["total"])
   m1 <- matrix(c(ct, tt, smpl - ct, bkgd - tt), 2, 2)
-  fisher.test(m1, alternative = "two.sided")
+  fisher.test(m1, alternative = alternative)
 })
 
 interactome.go_rna_related.B.df$ft_pval <- unlist(lapply(ftl, function(x) {x$p.value}))
 interactome.go_rna_related.B.df$ft_OR <- unlist(lapply(ftl, function(x) {x$estimate}))
-# changed p.adjust.method to "bonferroni" for more conservative control of p values, and set number to number of pathways in WCL
-interactome.go_rna_related.B.df$ft_fdr <- p.adjust(interactome.go_rna_related.B.df$ft_pval, method = "bonferroni", n = nrow(wcl.df))
+# changed p.adjust.method to "p.adjust.method" for more conservative control of p values, and set number to number of pathways in WCL
+interactome.go_rna_related.B.df$ft_fdr <- p.adjust(interactome.go_rna_related.B.df$ft_pval, method = p.adjust.method, n = nrow(wcl.df))
 
 #-----------plotting of KEGG enrichment analysis results---------------------------------
 df1 <- rbind(interactome.B.df[, c("A", "B", "ft_OR", "ft_fdr", "source")],
@@ -401,7 +397,7 @@ p4 <- p4 + theme(axis.text.x = element_text(angle = 90))
 p4 <- p4 + scale_fill_brewer(palette = "PRGn") 
 p4
 
-# Plot at KEGG C level
+#---------Plot at KEGG C level-------------------------
 dfC <- rbind(interactome.df[, c("A", "B", "C", "ft_OR", "ft_fdr", "source")],
              interactome.go_rna_related.df[, c("A", "B", "C", "ft_OR", "ft_fdr", "source")], 
              interactome.go_rna_unrelated.df[, c("A", "B", "C", "ft_OR", "ft_fdr", "source")]
@@ -410,8 +406,11 @@ dfC <- rbind(interactome.df[, c("A", "B", "C", "ft_OR", "ft_fdr", "source")],
 dfC$source <- as.factor(dfC$source)
 dfC$source <- factor(dfC$source, levels = levels(dfC$source)[c(3,1,2)])
 
-select1 <- unique(as.character(dfC[which(dfC$ft_fdr <= 0.10),]$C))
-dfC <- dfC[which(dfC$C %in% select1),]
+select1 <- unique(as.character(dfC[which(dfC$ft_fdr <= 0.1),]$C))
+select2 <- interactome.go_rna_unrelated.df[which(interactome.go_rna_unrelated.df$ft_OR > 1), "C"]
+select3 <- interactome.go_rna_related.df[which(interactome.go_rna_related.df$ft_OR > 1), "C"]
+select4 <- unique(c(select1, select2, select3))
+dfC <- dfC[which(dfC$C %in% select4),]
 
 dfC$C <- as.factor(as.character(dfC$C))
 dfC$ft_OR.cut <- cut(log2(dfC$ft_OR), breaks = c(-Inf,-4:4), right = F)
@@ -997,7 +996,7 @@ ftl <- apply(interactome.unrecognized.rbp.df, 1, function (x) {
 })
 interactome.unrecognized.rbp.df$ft_pval <- unlist(lapply(ftl, function(x) {x$p.value}))
 interactome.unrecognized.rbp.df$ft_OR <- unlist(lapply(ftl, function(x) {x$estimate}))
-interactome.unrecognized.rbp.df$ft_fdr <- p.adjust(interactome.unrecognized.rbp.df$ft_pval, method = "bonferroni", n = nrow(wcl.df))
+interactome.unrecognized.rbp.df$ft_fdr <- p.adjust(interactome.unrecognized.rbp.df$ft_pval, method = p.adjust.method, n = nrow(wcl.df))
 
 # summarizing data at "B" level before doing Fisher's Exact test
 interactome.unrecognized.rbp.B.df <- data.frame(matrix(ncol = 5, nrow = length(unique(interactome.unrecognized.rbp.df$B))))
@@ -1017,7 +1016,7 @@ ftl <- apply(interactome.unrecognized.rbp.B.df, 1, function (x) {
 
 interactome.unrecognized.rbp.B.df$ft_pval <- unlist(lapply(ftl, function(x) {x$p.value}))
 interactome.unrecognized.rbp.B.df$ft_OR <- unlist(lapply(ftl, function(x) {x$estimate}))
-interactome.unrecognized.rbp.B.df$ft_fdr <- p.adjust(interactome.unrecognized.rbp.B.df$ft_pval, method = "bonferroni", n = nrow(wcl.df))
+interactome.unrecognized.rbp.B.df$ft_fdr <- p.adjust(interactome.unrecognized.rbp.B.df$ft_pval, method = p.adjust.method, n = nrow(wcl.df))
 
 #-----------recognized RBPs-------------------------
 interactome.recognized.rbp <- read.xls(xls = "/Users/u1001407/Dropbox/REM project-Sebastian/HL-1 interactome superset.xlsx", sheet = "sheet 1", as.is = T)
@@ -1066,7 +1065,7 @@ ftl <- apply(interactome.recognized.rbp.df, 1, function (x) {
 })
 interactome.recognized.rbp.df$ft_pval <- unlist(lapply(ftl, function(x) {x$p.value}))
 interactome.recognized.rbp.df$ft_OR <- unlist(lapply(ftl, function(x) {x$estimate}))
-interactome.recognized.rbp.df$ft_fdr <- p.adjust(interactome.recognized.rbp.df$ft_pval, method = "bonferroni", n = nrow(wcl.df))
+interactome.recognized.rbp.df$ft_fdr <- p.adjust(interactome.recognized.rbp.df$ft_pval, method = p.adjust.method, n = nrow(wcl.df))
 
 # summarizing data at "B" level before doing Fisher's Exact test
 interactome.recognized.rbp.B.df <- data.frame(matrix(ncol = 5, nrow = length(unique(interactome.recognized.rbp.df$B))))
@@ -1086,6 +1085,43 @@ ftl <- apply(interactome.recognized.rbp.B.df, 1, function (x) {
 })
 interactome.recognized.rbp.B.df$ft_pval <- unlist(lapply(ftl, function(x) {x$p.value}))
 interactome.recognized.rbp.B.df$ft_OR <- unlist(lapply(ftl, function(x) {x$estimate}))
-interactome.recognized.rbp.B.df$ft_fdr <- p.adjust(interactome.recognized.rbp.B.df$ft_pval, method = "bonferroni", n = nrow(wcl.df))
+interactome.recognized.rbp.B.df$ft_fdr <- p.adjust(interactome.recognized.rbp.B.df$ft_pval, method = p.adjust.method, n = nrow(wcl.df))
+
+#---------total interactome rectangular tree map plotting---------------
+map.marketV2(id = interactome.df$ID,
+             area = interactome.df$count,
+             group = interactome.df$B,
+             color = log2(interactome.df$ft_OR),
+             main = "Interactome\nKEGG pathway enrichment/depletion",
+             lab = c(TRUE, FALSE))
+
+# rectangular tree map of top level KEGG categories
+pdf("/Users/u1001407/Dropbox//REM project-Sebastian/KEGG Analysis Figures/KEGG_toplevel_interactome.pdf", width = 15, height = 10)
+map.marketV2(id = interactome.df$ID,
+             area = interactome.df$total,
+             group = interactome.df$A,
+             color = log2(interactome.df$ft_OR),
+             main = "Interactome\nKEGG pathway enrichment/depletion",
+             lab = c(TRUE, FALSE))
+dev.off()
+
+#---------wcl rectangular tree map plotting---------------
+
+map.marketV2(id = wcl.df$ID,
+             area = wcl.df$count,
+             group = wcl.df$B,
+             color = log(wcl.df$ft_OR),
+             main = "WCL proteome\nKEGG pathway enrichment/depletion",
+             lab = c(TRUE, FALSE))
+
+# rectangular tree map of top level KEGG categories
+pdf("/Users/u1001407/Dropbox//REM project-Sebastian/KEGG Analysis Figures/KEGG_toplevel_wcl.pdf", width = 15, height = 10)
+map.marketV2(id = wcl.df$ID,
+             area = wcl.df$total,
+             group = wcl.df$A,
+             color = log2(wcl.df$ft_OR),
+             main = "WCL proteome\nKEGG pathway enrichment/depletion",
+             lab = c(TRUE, FALSE))
+dev.off()
 
 
