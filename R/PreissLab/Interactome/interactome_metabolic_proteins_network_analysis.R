@@ -406,16 +406,32 @@ dfC <- rbind(interactome.df[, c("A", "B", "C", "ft_OR", "ft_fdr", "source")],
 dfC$source <- as.factor(dfC$source)
 dfC$source <- factor(dfC$source, levels = levels(dfC$source)[c(3,1,2)])
 
-select1 <- unique(as.character(dfC[which(dfC$ft_fdr <= 0.1),]$C))
-select2 <- interactome.go_rna_unrelated.df[which(interactome.go_rna_unrelated.df$ft_OR > 1), "C"]
-select3 <- interactome.go_rna_related.df[which(interactome.go_rna_related.df$ft_OR > 1), "C"]
-select4 <- unique(c(select1, select2, select3))
-dfC <- dfC[which(dfC$C %in% select4),]
+select1 <- unique(as.character(dfC[which(dfC$ft_fdr <= 0.1 & dfC$ft_OR > 1),]$C))
+select1.pathIDs <- paste("mmu", unlist(lapply(strsplit(select1, "\\ "), function(x) x[1])), sep = "")
+dfC <- dfC[which(dfC$C %in% select1),]
 
 dfC$C <- as.factor(as.character(dfC$C))
 dfC$ft_OR.cut <- cut(log2(dfC$ft_OR), breaks = c(-Inf,-4:4), right = F)
 dfC$C <- factor(dfC$C, levels = levels(dfC$C)[dfC[dfC$source == "Interactome", "C"][order(dfC[which(dfC$source == "Interactome"),]$ft_OR.cut)]])
 ggplot(data = dfC, aes(x = source, y = C)) + geom_tile(aes(fill = ft_OR.cut), colour = "white") + scale_fill_brewer(palette = "PRGn") + theme(axis.text.x = element_text(angle = 90))
+
+# get highlighted pathway maps
+for (i in select1.pathIDs) {
+  if (length(interactome.go_rna_unrelated.in_path.IDs[[gsub("mmu", "", i)]]) > 0){
+    print(i)
+    url.rna_unrelated <- mark.pathway.by.objects(i, unlist(interactome.go_rna_unrelated.in_path.IDs[[gsub("mmu", "", i)]]))
+    print(url.rna_unrelated)
+    download.file(url.rna_unrelated, paste(i, "_RNA_unrelated", ".png", sep = ""))
+  }
+  if (length(interactome.go_rna_related.in_path.IDs[[gsub("mmu", "", i)]]) > 0){
+    url.rna_related <- mark.pathway.by.objects(i, unlist(interactome.go_rna_related.in_path.IDs[[gsub("mmu", "", i)]]))
+    download.file(url.rna_related, paste(i, "_RNA_related", ".png", sep = ""))
+  }
+  if (length(interactome.in_path.IDs[[gsub("mmu", "", i)]]) > 0){
+    url.interactome <- mark.pathway.by.objects(i, unlist(interactome.in_path.IDs[[gsub("mmu", "", i)]]))
+    download.file(url.interactome, paste(i, "_Interactome", ".png", sep = ""))
+  }
+}
 
 #---------DAVID Analysis------------------------------
 david <- DAVIDWebService$new(email="sebastian.kurscheid@anu.edu.au")
@@ -1106,7 +1122,6 @@ map.marketV2(id = interactome.df$ID,
 dev.off()
 
 #---------wcl rectangular tree map plotting---------------
-
 map.marketV2(id = wcl.df$ID,
              area = wcl.df$count,
              group = wcl.df$B,
