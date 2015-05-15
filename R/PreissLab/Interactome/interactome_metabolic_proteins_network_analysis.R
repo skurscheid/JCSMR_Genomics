@@ -130,18 +130,26 @@ wcl.df$ft_OR <- unlist(lapply(ftl, function(x) {x$estimate}))
 wcl.df$ft_fdr <- p.adjust(wcl.df$ft_pval, method = "fdr")
 
 #-----------total interactome----------------------------------------------------------------------------------------------------------
-interactome <- read.xls("/Users/u1001407/Dropbox/REM project-Sebastian/HL-1 interactome superset.xlsx", sheet = "Sheet1" , as.is = T)
+interactome <- read.xls("/Users/u1001407/Dropbox/REM project-Sebastian/HL-1 interactome superset.xlsx", sheet = "sheet 1" , as.is = T)
 colnames(interactome)[c(1,2)] <- c("ensembl_gene_id", "gene_symbol")
+interactome$GO <- as.factor(interactome$GO)
+interactome$RBD <- as.factor(interactome$RBD)
 
-entrez_ids <- getBM(attributes = c("ensembl_gene_id","entrezgene"), values = interactome[,"ensembl_gene_id"], filters = "ensembl_gene_id", mart = mouse)
-
+interactome.entrez_ids <- getBM(attributes = c("ensembl_gene_id","entrezgene"), values = interactome[,"ensembl_gene_id"], filters = "ensembl_gene_id", mart = mouse)
 interactome.human_homologs <- getBM(attributes = c("ensembl_gene_id","hsapiens_homolog_ensembl_gene"), values = interactome[,"ensembl_gene_id"], filters = "ensembl_gene_id", mart = mouse)
 interactome.mim <- getBM(attributes = c("ensembl_gene_id", "mim_morbid_accession"), values = interactome.human_homologs[,"hsapiens_homolog_ensembl_gene"], filters = "ensembl_gene_id", mart = human)
+interactome.WikiGene <- getBM(attributes = c("ensembl_gene_id", "wikigene_description"), values = interactome$ensembl_gene_id, filters = "ensembl_gene_id", mart = mouse)
+interactome.InterPro <- getBM(attributes = c("ensembl_gene_id", "interpro_short_description"), values = interactome$ensembl_gene_id, filters = "ensembl_gene_id", mart = mouse)
+interactome.GOslim <- getBM(attributes = c("ensembl_gene_id", "goslim_goa_accession", "goslim_goa_description"), values = interactome$ensembl_gene_id, filters = "ensembl_gene_id", mart = mouse)
 
 # remove ensembl_gene_ids which have duplicated entrez_ids
-entrez_ids <- entrez_ids[-which(duplicated(entrez_ids$ensembl_gene_id)),]
-interactome <- merge(interactome, entrez_ids, by.x = "ensembl_gene_id", by.y = "ensembl_gene_id", all.x = T)
-rm(entrez_ids)
+interactome.entrez_ids <- interactome.entrez_ids[-which(duplicated(interactome.entrez_ids$ensembl_gene_id)),]
+interactome <- merge(interactome, interactome.entrez_ids, by.x = "ensembl_gene_id", by.y = "ensembl_gene_id", all.x = T)
+
+# better not to merge as 1->many relationships
+#interactome <- merge(interactome, interactome.entrez_ids, by.x = "ensembl_gene_id", by.y = "ensembl_gene_id", all.x = T)
+#interactome <- merge(interactome, interactome.WikiGene, by.x = "ensembl_gene_id", by.y = "ensembl_gene_id", all.x = T)
+#interactome <- merge(interactome, interactome.GOslim, by.x = "ensembl_gene_id", by.y = "ensembl_gene_id", all.x = T)
 interactome.entrezIDs <- unique(interactome[!is.na(interactome$entrezgene),]$entrezgene)
 interactome.keggIDs <- keggConv.batch(interactome.entrezIDs)
 keggQ <- lapply(interactome.keggIDs, function(x) keggGet(x))
@@ -212,18 +220,8 @@ interactome.B.df$ft_OR <- unlist(lapply(ftl, function(x) {x$estimate}))
 interactome.B.df$ft_fdr <- p.adjust(interactome.B.df$ft_pval, method = p.adjust.method, n = nrow(wcl.df))
 
 #-----------GO RNA unrelated-------------------------------------------
-interactome.go_rna_unrelated <- read.xls(xls = "/Users/u1001407/Dropbox/REM project-Sebastian/HL-1 interactome superset.xlsx", sheet = "sheet 1", as.is = T)
-colnames(interactome.go_rna_unrelated)[1:2] <- c("ensembl_gene_id", "gene_symbol")
-interactome.go_rna_unrelated$GO <- as.factor(interactome.go_rna_unrelated$GO)
-interactome.go_rna_unrelated$RBD <- as.factor(interactome.go_rna_unrelated$RBD)
-interactome.go_rna_unrelated <- interactome.go_rna_unrelated[which(interactome.go_rna_unrelated$GO == "unrelated"),]
-
-entrez_ids <- getBM(attributes = c("ensembl_gene_id","entrezgene"), values = interactome.go_rna_unrelated[,"ensembl_gene_id"], filters = "ensembl_gene_id", mart = mouse)
-interactome.go_rna_unrelated.human_homologs <- getBM(attributes = c("ensembl_gene_id","hsapiens_homolog_ensembl_gene"), values = interactome.go_rna_unrelated[,"ensembl_gene_id"], filters = "ensembl_gene_id", mart = mouse)
-
-# remove ensembl_gene_ids which have duplicated entrez_ids
-entrez_ids <- entrez_ids[-which(duplicated(entrez_ids$ensembl_gene_id)),]
-interactome.go_rna_unrelated <- merge(interactome.go_rna_unrelated, entrez_ids, by.x = "ensembl_gene_id", by.y = "ensembl_gene_id", all.x = T)
+# subset the interactome table
+interactome.go_rna_unrelated <- interactome[which(interactome$GO == "unrelated"),]
 interactome.go_rna_unrelated.entrezIDs <- unique(interactome.go_rna_unrelated[!is.na(interactome.go_rna_unrelated$entrezgene),]$entrezgene)
 interactome.go_rna_unrelated.keggIDs <- keggConv.batch(interactome.go_rna_unrelated.entrezIDs)
 
@@ -287,17 +285,8 @@ interactome.go_rna_unrelated.B.df$ft_OR <- unlist(lapply(ftl, function(x) {x$est
 interactome.go_rna_unrelated.B.df$ft_fdr <- p.adjust(interactome.go_rna_unrelated.B.df$ft_pval, method = p.adjust.method, n = nrow(wcl.df))
 
 #-----------GO RNA related-------------------------------------------
-interactome.go_rna_related <- read.xls(xls = "/Users/u1001407/Dropbox/REM project-Sebastian/HL-1 interactome superset.xlsx", sheet = "sheet 1", as.is = T)
-colnames(interactome.go_rna_related)[1:2] <- c("ensembl_gene_id", "gene_symbol")
-interactome.go_rna_related$GO <- as.factor(interactome.go_rna_related$GO)
-interactome.go_rna_related$RBD <- as.factor(interactome.go_rna_related$RBD)
-interactome.go_rna_related <- interactome.go_rna_related[-which(interactome.go_rna_related$GO == "unrelated"),]
+interactome.go_rna_related <- interactome[-which(interactome$GO == "unrelated"),]
 
-entrez_ids <- getBM(attributes = c("ensembl_gene_id","entrezgene"), values = interactome.go_rna_related[,"ensembl_gene_id"], filters = "ensembl_gene_id", mart = mouse)
-
-# remove ensembl_gene_ids which have duplicated entrez_ids
-entrez_ids <- entrez_ids[-which(duplicated(entrez_ids$ensembl_gene_id)),]
-interactome.go_rna_related <- merge(interactome.go_rna_related, entrez_ids, by.x = "ensembl_gene_id", by.y = "ensembl_gene_id", all.x = T)
 interactome.go_rna_related.entrezIDs <- unique(interactome.go_rna_related[!is.na(interactome.go_rna_related$entrezgene),]$entrezgene)
 interactome.go_rna_related.keggIDs <- keggConv.batch(interactome.go_rna_related.entrezIDs)
 
