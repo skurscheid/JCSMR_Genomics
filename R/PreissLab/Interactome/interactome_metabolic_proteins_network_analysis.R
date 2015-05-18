@@ -26,9 +26,9 @@ library("biomaRt")
 library("gdata")
 library("GO.db")
 library("KEGGREST")
-library("jsonlite")
 library("ggplot2")
-library("RDAVIDWebService")
+library("gplots")
+
 
 source("/Users/u1001407/Dropbox/Development/GeneralPurpose/R/map_market_V2.R")
 
@@ -246,6 +246,7 @@ interactome.go_rna_unrelated.in_path.IDs <- lapply(rownames(interactome.go_rna_u
   kL1 <- keggLink("mmu", paste("mmu", x, sep = ""))
   in_path <- interactome.go_rna_unrelated.keggIDs[which(interactome.go_rna_unrelated.keggIDs %in% kL1)]
 })
+names(interactome.go_rna_unrelated.in_path.IDs) <- rownames(interactome.go_rna_unrelated.df)
 
 # perform Fisher's Exact Test for each category
 # Using WCL as background
@@ -312,6 +313,7 @@ interactome.go_rna_related.in_path.IDs <- lapply(rownames(interactome.go_rna_rel
   kL1 <- keggLink("mmu", paste("mmu", x, sep = ""))
   in_path <- interactome.go_rna_related.keggIDs[which(interactome.go_rna_related.keggIDs %in% kL1)]
 })
+names(interactome.go_rna_related.in_path.IDs) <- rownames(interactome.go_rna_related.df)
 
 # perform Fisher's Exact Test for each category
 # Using WCL as background
@@ -387,9 +389,9 @@ p4 <- p4 + scale_fill_brewer(palette = "PRGn")
 p4
 
 #---------Plot at KEGG C level-------------------------
-dfC <- rbind(interactome.df[, c("A", "B", "C", "ft_OR", "ft_fdr", "source")],
-             interactome.go_rna_related.df[, c("A", "B", "C", "ft_OR", "ft_fdr", "source")], 
-             interactome.go_rna_unrelated.df[, c("A", "B", "C", "ft_OR", "ft_fdr", "source")]
+dfC <- rbind(interactome.df[, c("A", "B", "C", "ft_OR", "ft_fdr", "source", "count")],
+             interactome.go_rna_related.df[, c("A", "B", "C", "ft_OR", "ft_fdr", "source", "count")], 
+             interactome.go_rna_unrelated.df[, c("A", "B", "C", "ft_OR", "ft_fdr", "source", "count")]
 )
 
 dfC$source <- as.factor(dfC$source)
@@ -421,3 +423,32 @@ for (i in select1.pathIDs) {
     download.file(url.interactome, paste(i, "_Interactome", ".png", sep = ""))
   }
 }
+
+#---------Venn diagram for metabolic pathways------------------
+m1 <- matrix(nrow = length(unique(unlist(interactome.in_path.IDs[c("00020", "00010", "01230", "01200", "01130")]))), ncol = 5)
+rownames(m1) <- unique(unlist(interactome.in_path.IDs[c("00020", "00010", "01230", "01200", "01130")]))
+colnames(m1) <- c("00020", "00010", "01230", "01200", "01130")
+
+g00020 <- as.character(interactome.in_path.IDs[[c("00020")]])
+g00010 <- as.character(interactome.in_path.IDs[[c("00010")]])
+g01230 <- as.character(interactome.in_path.IDs[[c("01230")]])
+g01200 <- as.character(interactome.in_path.IDs[[c("01200")]])
+g01130 <- as.character(interactome.in_path.IDs[[c("01130")]])
+universe <- unique(c(g00020, g00010, g01230, g01200, g01130))
+
+g00020.1 <- universe %in% g00020
+g00010.1 <- universe %in% g00010
+g01230.1 <- universe %in% g01230
+g01200.1 <- universe %in% g01200
+g01130.1 <- universe %in% g01130
+
+x <- "00020"
+m1[which(rownames(m1) %in% (interactome.in_path.IDs[[x]])), x] <- T
+x <- "00010"
+m1[which(rownames(m1) %in% (interactome.in_path.IDs[[x]])), x] <- T
+x <- "01230"
+m1[which(rownames(m1) %in% (interactome.in_path.IDs[[x]])), x]
+x <- "01200"
+m1[which(rownames(m1) %in% (interactome.in_path.IDs[[x]])), x] <- T
+x <- "01130"
+m1[which(rownames(m1) %in% (interactome.in_path.IDs[[x]])), x] <-T
