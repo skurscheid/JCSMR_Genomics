@@ -29,8 +29,18 @@ canonicalChr <- c(seq(1,19), "X", "Y", "M")
 
 repeatMasker <- read.table("~/Data/Annotations/GRCm38_mm10/repeatMaskerMM10.txt", header = T, as.is = T, sep = "\t")
 repeatMasker$genoName <- gsub("chr", "", repeatMasker$genoName)
-gr.repeatMasker <- GRanges(seqnames = repeatMasker$genoName, IRanges(start = repeatMasker$genoStart, end = repeatMasker$genoEnd), strand = repeatMasker$strand, mcols = repeatMasker[,c("repName", "repClass", "repFamily", "repStart", "repEnd", "repLeft")])
+gr.repeatMasker <- GRanges(seqnames = repeatMasker$genoName, 
+                           IRanges(start = repeatMasker$genoStart, 
+                                   end = repeatMasker$genoEnd), 
+                           strand = repeatMasker$strand, 
+                           mcols = repeatMasker[,c("repName", "repClass", "repFamily", "repStart", "repEnd", "repLeft", "swScore", "milliDiv", "milliDel", "milliIns")])
 seqlevels(gr.repeatMasker, force = T) <- canonicalChr 
+
+# convert GRanges object into GRangesList by chromosome
+grl.repeatMasker <- GRangesList(lapply(seqlevels(gr.repeatMasker), function(x) {gr.repeatMasker[which(seqnames(gr.repeatMasker) == x)]}))
+names(grl.repeatMasker) <- seqlevels(gr.repeatMasker)
+# convert GRangesList into IRangesList object for faster computation
+irl.repeatMasker <- as(GRangesList, "IRangesList")
 
 #----------load alignments from BAM file--------------
 file1 <- ("../G1_Input_multimapped.sorted.sub.bam")
@@ -45,8 +55,12 @@ seqlevels(bam1, force = T) <- canonicalChr
 
 # retrieve multimapping reads
 bam1.mm <- bam1[which(width(bam1@partitioning) > 1)]
-#mm.id <- sapply(bam1.mm, function(x) unique(elementMetadata(x)$qname))
+mm.id <- sapply(bam1.mm, function(x) unique(elementMetadata(x)$qname))
 
+# create IRangesList elements from each alignment per read
+lapply(bam1.mm, function(x){
+  
+})
 # use snowfall for parallel execution
 library(snowfall)
 # initialize cluster
@@ -60,8 +74,11 @@ sfLibrary(Rsamtools)
 # first step - determine which read maps to LINE1 elements only
 # second step - isolate alignments of those reads
 # third step - randomly choose one alignment
-x1 <- sfLapply(bam1.mm, function(x) {
-  t1 <- as.data.frame(mcols(subsetByOverlaps(gr.repeatMasker, x, ignore.strand = T)))[,c("mcols.repClass", "mcols.repFamily")]
+irl.bam1.mm <- as(bam1.mm, "IRangesList")
+ir.repeatMasker <- ranges(gr.repeatMasker)
+
+x1 <- sfLapply(irl.bam1.mm, function(x) {
+  t1 <- as.data.frame(elemen(subsetByOverlaps(gr.repeatMasker, x, ignore.strand = T)))[,c("mcols.repClass", "mcols.repFamily")]
   if (length(unique(t1$mcols.repClass)) == 1) {
     REclass <- unique(t1$mcols.repClass)
     if (REclass == "LINE") {
