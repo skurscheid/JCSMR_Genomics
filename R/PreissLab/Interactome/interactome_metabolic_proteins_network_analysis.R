@@ -404,7 +404,44 @@ dfC <- dfC[which(dfC$C %in% select1),]
 dfC$C <- as.factor(as.character(dfC$C))
 dfC$ft_OR.cut <- cut(log2(dfC$ft_OR), breaks = c(-Inf,-4:4), right = F)
 dfC$C <- factor(dfC$C, levels = levels(dfC$C)[dfC[dfC$source == "Interactome", "C"][order(dfC[which(dfC$source == "Interactome"),]$ft_OR.cut)]])
-ggplot(data = dfC, aes(x = source, y = C)) + geom_tile(aes(fill = ft_OR.cut), colour = "white") + scale_fill_brewer(palette = "PRGn") + theme(axis.text.x = element_text(angle = 90))
+
+# formatting labels etc for plotting
+l1 <- levels(dfC$ft_OR.cut)
+l1 <- gsub("\\[", "", l1)
+l1 <- gsub("\\)", "", l1)
+levels(dfC$ft_OR.cut) <- l1
+
+l1 <- as.character(levels(dfC$C))
+l1 <- unlist(lapply(strsplit(l1, " "), function(x) {
+  for (i in 2:length(x)){
+    if (i == 2){
+      v <- x[i]
+    } else {
+      v <- paste(v, x[i])
+    }
+  }
+  return(v)
+}))
+levels(dfC$C) <- l1
+
+levels(dfC$source)[2:3] <- c("RNA-related", "RNA-unrelated")
+
+
+#ggplot(data = dfC, aes(x = source, y = C)) + geom_tile(aes(fill = ft_OR.cut), colour = "white") + scale_fill_brewer(type = "div") + theme(axis.text.x = element_text(angle = 90))
+p1 <-   ggplot(data = dfC, aes(y = source, x = C)) + 
+        geom_tile(aes(fill = ft_OR.cut), colour = "white") + 
+        scale_fill_discrete(h = c(0,250), c = 35) +
+        theme(axis.text.y = element_text(angle = 0, size = 4), axis.title = element_blank()) +
+        theme(legend.text = element_text(size = 4), legend.title = element_text(size = 4),
+              legend.key.size = unit(3, "mm"),
+              legend.direction = "horizontal",
+              legend.position = c(0.45,-1.6),
+              legend.justification = "center") +
+        theme(axis.text.x = element_text(angle = 45, vjust = 0.9, hjust = 0.9 ,size = 5)) +
+        labs(fill = "Log2 OR")
+ggsave("Figure_1g.pdf", plot = p1, scale = 1, height = 50, width = 110, unit = "mm")
+
+# "PRGn"
 
 # get highlighted pathway maps
 for (i in select1.pathIDs) {
