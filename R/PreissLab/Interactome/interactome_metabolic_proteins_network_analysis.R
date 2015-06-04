@@ -28,7 +28,8 @@ library("GO.db")
 library("KEGGREST")
 library("ggplot2")
 library("gplots")
-
+library("grid")
+librar("scales")
 
 source("/Users/u1001407/Dropbox/Development/GeneralPurpose/R/map_market_V2.R")
 
@@ -403,7 +404,9 @@ dfC <- dfC[which(dfC$C %in% select1),]
 
 dfC$C <- as.factor(as.character(dfC$C))
 dfC$ft_OR.cut <- cut(log2(dfC$ft_OR), breaks = c(-Inf,-4:4), right = F)
-dfC$C <- factor(dfC$C, levels = levels(dfC$C)[dfC[dfC$source == "Interactome", "C"][order(dfC[which(dfC$source == "Interactome"),]$ft_OR.cut)]])
+dfC$C <- factor(dfC$C, levels = levels(dfC$C)[dfC[dfC$source == "Interactome", "C"][order(dfC[which(dfC$source == "Interactome"),]$ft_OR.cut, decreasing = T)]])
+
+
 
 # formatting labels etc for plotting
 l1 <- levels(dfC$ft_OR.cut)
@@ -427,20 +430,47 @@ levels(dfC$C) <- l1
 levels(dfC$source)[2:3] <- c("RNA-related", "RNA-unrelated")
 
 
-#ggplot(data = dfC, aes(x = source, y = C)) + geom_tile(aes(fill = ft_OR.cut), colour = "white") + scale_fill_brewer(type = "div") + theme(axis.text.x = element_text(angle = 90))
-p1 <-   ggplot(data = dfC, aes(y = source, x = C)) + 
-        geom_tile(aes(fill = ft_OR.cut), colour = "white") + 
-        scale_fill_discrete(h = c(0,250), c = 35) +
-        theme(axis.text.y = element_text(angle = 0, size = 4), axis.title = element_blank()) +
-        theme(legend.text = element_text(size = 4), legend.title = element_text(size = 4),
-              legend.key.size = unit(3, "mm"),
-              legend.direction = "horizontal",
-              legend.position = c(0.45,-1.6),
-              legend.justification = "center") +
-        theme(axis.text.x = element_text(angle = 45, vjust = 0.9, hjust = 0.9 ,size = 5)) +
-        labs(fill = "Log2 OR")
-ggsave("Figure_1g.pdf", plot = p1, scale = 1, height = 50, width = 110, unit = "mm")
+levels(dfC$C)[3] <- "Ribosome biogenesis"
+levels(dfC$C)[6] <- "TCA cycle"
+levels(dfC$C)[7] <- "mRNA surveillance"
+levels(dfC$C)[11] <- "AA biosynthesis"
+levels(dfC$C)[8] <- "H. simplex infection"
+levels(dfC$C)[9] <- "Antibiotic biosynthesis"
+levels(dfC$C)[12] <- "Glycolysis/Gluconeogenesis"
 
+flevels <- levels(dfC$source)
+
+l1 <- factor(dfC$C, levels = levels(dfC$C)[c(1,2,3,7,4,5,6,12,8,9,10,11)])
+dfC$C <- l1
+#levels(dfC$C)[1:4] <- c("I", "II", "III", "IV") # Ribosome, RNA transport, Ribosome biogenesis, mRNA surveillance
+#levels(dfC$C)[10:12] <- c("V", "VI", "VII") # Antibiotic biosynthesis, Carbon metabolism, AA biosynthesis
+
+
+#ggplot(data = dfC, aes(x = source, y = C)) + geom_tile(aes(fill = ft_OR.cut), colour = "white") + scale_fill_brewer(type = "div") + theme(axis.text.x = element_text(angle = 90))
+p1 <- ggplot(data = dfC, aes(y = source, x = C)) + 
+      geom_tile(aes(fill = ft_OR.cut), colour = "white") + 
+      scale_fill_manual(values = brewer_pal(pal = "PuOr")(8), labels = levels(dfC$ft_OR.cut)) + #
+      theme(axis.text.y = element_text(angle = 0, size = 5), axis.title = element_blank()) +
+      guides(fill = guide_legend(label.position = "bottom", direction = "horizontal")) +
+      theme(axis.text.x = element_text(angle = 45, vjust = 0.9, hjust = 0.8, size = 6.6)) +
+      labs(fill = "Log2 OR") +
+      scale_y_discrete(limits = rev(flevels)) +
+      theme(legend.position = c(0.4,-1.92),
+            legend.text = element_text(size = 4),
+            legend.text.align = 0.5,
+            legend.title = element_text(size = 4, vjust = 5),
+            legend.key.size = unit(3.5, "mm"),
+            legend.key.width = unit(3.5, "mm"),
+            legend.margin = unit(0, "mm"),
+            panel.margin = unit(1, "mm"))
+
+ggsave("/Users/u1001407/Dropbox//REM project-Sebastian/Figure_1g_20150603.pdf", plot = p1, scale = 1, height = 50, width = 110, unit = "mm")
+
+
+legend.direction = "vertical",
+legend.position = c(1, 0),
+legend.justification = "center") +
+  
 # "PRGn"
 
 # get highlighted pathway maps
