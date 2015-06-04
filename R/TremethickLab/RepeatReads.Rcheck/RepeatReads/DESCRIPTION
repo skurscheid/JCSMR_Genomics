@@ -1,0 +1,12 @@
+Package: RepeatReads
+Type: Package
+Title: What the package does (short line)
+Version: 1.0
+Date: 2015-05-20
+Author: Who wrote it
+Maintainer: Who to complain to <yourfault@somewhere.net>
+Description: More about what it does (maybe more than one line)
+License: What license is it under?
+Depends: methods
+Packaged: 2015-05-21 01:21:39 UTC; u1001407
+Built: R 3.1.2; ; 2015-05-21 01:21:39 UTC; unix

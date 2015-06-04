@@ -64,79 +64,71 @@ rm(t2)
 gbm.hm450 <- gbm.hm450[names(gr.annot450k.auto.noSNPs),]
 gbm.hm450 <- gbm.hm450[complete.cases(gbm.hm450),]
 
-#--------------------------------------------------------------------------------
-#
-# RNA-Seq data
-#
-#--------------------------------------------------------------------------------
+#---------Gene expression data-----------------------------------------------------------------------
+# TCGA Agilent data is two-colour
+# gene level normalized data is log2 ratio difference to synthetic reference RNA
 
 # load data
-gbm.exp_agi1.metadata <- read.table("METADATA/UNC__AgilentG4502A_07_1/unc.edu_GBM.AgilentG4502A_07_1.sdrf.txt", header = T, as.is = T, sep = "\t") # 123 samples
+# gbm.exp_agi1.metadata <- read.table("METADATA/UNC__AgilentG4502A_07_1/unc.edu_GBM.AgilentG4502A_07_1.sdrf.txt", header = T, as.is = T, sep = "\t") # 123 samples
 gbm.exp_agi2.metadata <- read.table("METADATA/UNC__AgilentG4502A_07_2/unc.edu_GBM.AgilentG4502A_07_2.sdrf.txt", header = T, as.is = T, sep = "\t") # 492 samples -> continue with these data
+gbm.exp_agi2.metadata <- gbm.exp_agi2.metadata[gbm.exp_agi2.metadata$Characteristics..Organism_Part. %in% c("GBM", "Brain"), ]
 
 gbm.exp_agi2.samples <- unlist(lapply(strsplit(gbm.exp_agi2.metadata[which(gbm.exp_agi2.metadata$Comment..TCGA.Data.Type..1 == "Expression-Gene" & gbm.exp_agi2.metadata$Labeled.Extract.Name != "Stratagene Univeral Reference"), "Comment..TCGA.Barcode."], "-"), function(x) paste(x[1], x[2], x[3], sep = "-")))
-expfiles <- gbm.rnaseq.metadata[which(gbm.rnaseq.metadata$Comment..TCGA.Data.Type..1 == "RSEM_genes"),]$Derived.Data.File
-rnaseq.files.rsem_norm <- gbm.rnaseq.metadata[which(gbm.rnaseq.metadata$Comment..TCGA.Data.Type..1 == "RSEM_genes_normalized"),]$Derived.Data.File
-rnaseq.path <- ("unc.edu_gbm.IlluminaHiSeq_RNASeqV2.Level_3.1.14.0/")
+gbm.exp_agi2.files <- gbm.exp_agi2.metadata[which(gbm.exp_agi2.metadata$Comment..TCGA.Data.Type..1 == "Expression-Gene"),]$Derived.Array.Data.Matrix.File.1
+names(gbm.exp_agi2.samples) <- gbm.exp_agi2.files
+gbm.exp_agi2.path <- ("Expression-Genes/UNC__AgilentG4502A_07_2/Level_3/")
 
-# here we use the RSEM estimates
-for (x in rnaseq.files) {
+TCGA.Agilent.lvl3 <- read.table(paste(gbm.exp_agi2.path, gbm.exp_agi2.files[1], sep = ""), header = T, sep = "\t")
+
+rl1 <- readLines(paste(gbm.exp_agi2.path, gbm.exp_agi2.files[1], sep = ""))
+head(unlist(strsplit(rl1, "\t")))
+
+# here we use the Agilent gene-level expression estimates
+for (x in gbm.exp_agi2.files) {
   print(x)
-  f1 <- paste(rnaseq.path, x, sep = "")
+  f1 <- paste(gbm.exp_agi2.path, x, sep = "")
   if (file.exists(f1)) {
-    t1 <- read.table(f1, header = T, as.is = T, sep = "\t")
-    if (which(rnaseq.files == x) == 1) {
-      c1 <- t1[,1]
-      scaled_estimates <- t1[,"scaled_estimate"]
-      t2 <- cbind(c1, scaled_estimates)
+    rl1 <- readLines(f1)
+    rl1 <- rl1[-2]
+    id <- unlist(lapply(strsplit(rl1, "\t"), function(x) x[1]))
+    val <- unlist(lapply(strsplit(rl1, "\t"), function(x) x[2]))
+    t1 <- data.frame(gene_symbol = id, log2_ratio = val)
+    if (which(gbm.exp_agi2.files == x) == 1) {
+      t2 <- cbind(id, val)
     } else {
-      t2 <- cbind(t2, t1[, "scaled_estimate"])
+      t2 <- cbind(t2, val)
     }
   }
 }
 
 rownames(t2) <- t2[,1]
 t2 <- t2[,-1]
+colnames(t2) <- t2[1,]
+t2 <- t2[-1,]
 class(t2) <- "numeric"
-
-colnames(t2) <- gbm.rnaseq.samples
-gbm.rnaseq <- t2
+colnames(t2) <- unlist(lapply(strsplit(colnames(t2), "-"), function(x) paste(x[1:3], collapse = "-")))
+gbm.exp_agi <- t2
 rm(t2)
 
-gbm.rnaseq.samples <- gbm.rnaseq.samples[-which(duplicated(gbm.rnaseq.samples))]
-gbm.rnaseq <- gbm.rnaseq[,-which(duplicated(gbm.rnaseq.samples))]
+gbm.exp_agi <- gbm.exp_agi[,-which(duplicated(gbm.exp_agi2.samples))]
+hist.probes <- rownames(gbm.exp_agi)[grep("H2A", rownames(gbm.exp_agi))][-c(13,20)]
+hist.probes <- unique(c(hist.probes, rownames(gbm.exp_agi)[grep("HIST", rownames(gbm.exp_agi))]))
+gbm.histone.exp <- gbm.exp_agi[hist.probes,]
 
-# here we use the RSEM normalized counts
-for (x in rnaseq.files.rsem_norm) {
-  print(x)
-  f1 <- paste(rnaseq.path, x, sep = "")
-  if (file.exists(f1)) {
-    t1 <- read.table(f1, header = T, as.is = T, sep = "\t")
-    if (which(rnaseq.files.rsem_norm == x) == 1) {
-      c1 <- t1[,1]
-      norm_counts <- t1[,"normalized_count"]
-      t2 <- cbind(c1, norm_counts)
-    } else {
-      t2 <- cbind(t2, t1[, "normalized_count"])
-    }
-  }
-}
+pdf("./Data/Tremethick/Brain/Heatmap_GBM_Histone_genes.pdf", height = 15, width = 15)
+HeatAutosomeProbes <- heatmap.3(gbm.histone.exp,col=jet.colors(10),
+                                trace="none",density="density",denscol="black",
+                                hclustfun=function(x) hclust(x,method="ward"),
+                                #ColSideColors=rcw,
+                                cex.var=0.2,
+                                scale="none",xlab="sample",ylab="",
+                                labCol = rep("",nrow(tab)),
+                                main="Log2-ratios GBM vs reference RNA\nhuman histone genes (on chip)")
+dev.off()
+gbm.exp_agi.samples <- colnames(gbm.exp_agi)
 
-rownames(t2) <- t2[,1]
-t2 <- t2[,-1]
-class(t2) <- "numeric"
-
-gbm.rnaseq.samples <- unlist(lapply(strsplit(gbm.rnaseq.metadata[which(gbm.rnaseq.metadata$Comment..TCGA.Data.Type..1 == "RSEM_genes"), "Comment..TCGA.Barcode."], "-"), function(x) paste(x[1], x[2], x[3], sep = "-")))
-
-colnames(t2) <- gbm.rnaseq.samples
-gbm.rnaseq.rsem_norm <- t2
-rm(t2)
-gbm.rnaseq.rsem_norm <- gbm.rnaseq.rsem_norm[,-which(duplicated(gbm.rnaseq.samples))]
-gbm.rnaseq.samples <- gbm.rnaseq.samples[-which(duplicated(gbm.rnaseq.samples))]
-
-#-----------------------------------------------------------------
-# create tables with samples shared between both data sets
-i1 <- intersect(gbm.hm450.samples, gbm.rnaseq.samples)
+#---------create tables with samples shared between both data sets--------------------------------------------------------
+i1 <- intersect(gbm.hm450.samples, gbm.exp_agi.samples)
 
 gbm.rnaseq <- gbm.rnaseq[,i1]
 gbm.hm450 <- gbm.hm450[,i1]

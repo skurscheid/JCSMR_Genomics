@@ -1,0 +1,95 @@
+
+R version 3.1.2 (2014-10-31) -- "Pumpkin Helmet"
+Copyright (C) 2014 The R Foundation for Statistical Computing
+Platform: x86_64-apple-darwin13.4.0 (64-bit)
+
+R is free software and comes with ABSOLUTELY NO WARRANTY.
+You are welcome to redistribute it under certain conditions.
+Type 'license()' or 'licence()' for distribution details.
+
+  Natural language support but running in an English locale
+
+R is a collaborative project with many contributors.
+Type 'contributors()' for more information and
+'citation()' on how to cite R or R packages in publications.
+
+Type 'demo()' for some demos, 'help()' for on-line help, or
+'help.start()' for an HTML browser interface to help.
+Type 'q()' to quit R.
+
+> pkgname <- "RepeatReads"
+> source(file.path(R.home("share"), "R", "examples-header.R"))
+> options(warn = 1)
+> base::assign(".ExTimings", "RepeatReads-Ex.timings", pos = 'CheckExEnv')
+> base::cat("name\tuser\tsystem\telapsed\n", file=base::get(".ExTimings", pos = 'CheckExEnv'))
+> base::assign(".format_ptime",
++ function(x) {
++   if(!is.na(x[4L])) x[1L] <- x[1L] + x[4L]
++   if(!is.na(x[5L])) x[2L] <- x[2L] + x[5L]
++   options(OutDec = '.')
++   format(x[1L:3L], digits = 7L)
++ },
++ pos = 'CheckExEnv')
+> 
+> ### * </HEADER>
+> library('RepeatReads')
+> 
+> base::assign(".oldSearch", base::search(), pos = 'CheckExEnv')
+> cleanEx()
+> nameEx("RepeatRead-class")
+> ### * RepeatRead-class
+> 
+> flush(stderr()); flush(stdout())
+> 
+> base::assign(".ptime", proc.time(), pos = "CheckExEnv")
+> ### Name: RepeatRead-class
+> ### Title: Class '"RepeatRead"'
+> ### Aliases: RepeatRead-class RepeatRead
+> ### Keywords: classes
+> 
+> ### ** Examples
+> 
+> showClass("RepeatRead")
+Class "RepeatRead" [package "RepeatReads"]
+
+Slots:
+                  
+Name:       .xData
+Class: environment
+
+Extends: 
+Class "envRefClass", directly
+Class ".environment", by class "envRefClass", distance 2
+Class "refClass", by class "envRefClass", distance 2
+Class "environment", by class "envRefClass", distance 3, with explicit coerce
+Class "refObject", by class "envRefClass", distance 3
+> 
+> 
+> 
+> base::assign(".dptime", (proc.time() - get(".ptime", pos = "CheckExEnv")), pos = "CheckExEnv")
+> base::cat("RepeatRead-class", base::get(".format_ptime", pos = 'CheckExEnv')(get(".dptime", pos = "CheckExEnv")), "\n", file=base::get(".ExTimings", pos = 'CheckExEnv'), append=TRUE, sep="\t")
+> cleanEx()
+> nameEx("RepeatRead")
+> ### * RepeatRead
+> 
+> flush(stderr()); flush(stdout())
+> 
+> base::assign(".ptime", proc.time(), pos = "CheckExEnv")
+> ### Name: RepeatRead
+> ### Title: Creates an object of class "RepeatRead"
+> ### Aliases: RepeatRead
+> ### Keywords: ~kwd1 ~kwd2
+> 
+> ### ** Examples
+> 
+> ##---- Should be DIRECTLY executable !! ----
+> ##-- ==>  Define data, use random,
+> ##--	or do  help(data=index)  for the standard data sets.
+> 
+> ## The function is currently defined as
+> structure(function (...) 
++ new("RepeatRead", ...), className = structure("RepeatRead", package = "RepeatReads"), package = "RepeatReads", generator = <S4 object of class structure("refGeneratorSlot", package = "methods")>, class = structure("refObjectGenerator", package = "methods"))
+Error: unexpected '<' in:
+"structure(function (...) 
+new("RepeatRead", ...), className = structure("RepeatRead", package = "RepeatReads"), package = "RepeatReads", generator = <"
+Execution halted

@@ -104,6 +104,20 @@ rm(t2)
 lgg.rnaseq <- lgg.rnaseq[,-which(duplicated(colnames(lgg.rnaseq)))]
 lgg.rnaseq.samples <- lgg.rnaseq.samples[-which(duplicated(lgg.rnaseq.samples))]
 
+lgg.histone_genes <- rownames(lgg.rnaseq.rsem_norm)[grep("H2A", rownames(lgg.rnaseq.rsem_norm))][-c(23,24)]
+lgg.histone_genes <- unique(c(lgg.histone_genes, rownames(lgg.rnaseq)[grep("HIST", rownames(lgg.rnaseq))]))
+
+tab <- lgg.rnaseq[lgg.histone_genes,]
+tab <- log2(tab + 1)
+HeatHistoneGenes <- heatmap.3(tab,col=jet.colors(10),
+                                trace="none",density="density",denscol="black",
+                                hclustfun=function(x) hclust(x,method="ward"),
+                                #ColSideColors=rcw,
+                                cex.var=0.2,
+                                scale="none",xlab="sample",ylab="",
+                                labCol = rep("",nrow(tab)),
+                                main="LGG relative abundance\nhuman histone genes (on chip)")
+
 # here we use the RSEM normalized counts
 for (x in rnaseq.files.rsem_norm) {
   print(x)
@@ -132,6 +146,29 @@ rm(t2)
 lgg.rnaseq.rsem_norm <- lgg.rnaseq.rsem_norm[,-which(duplicated(lgg.rnaseq.samples))]
 lgg.rnaseq.samples <- lgg.rnaseq.samples[-which(duplicated(lgg.rnaseq.samples))]
 
+tab <- lgg.rnaseq.rsem_norm[lgg.histone_genes,]
+tab <- log2(tab + 1)
+
+pdf("/Users/u1001407/Data//Tremethick/Brain Data/Heatmap_Histones_LGG.pdf", height = 15, width = 15)
+HeatHistoneGenes <- heatmap.3(tab,col=jet.colors(10),
+                              trace="none",density="density",denscol="black",
+                              hclustfun=function(x) hclust(x,method="ward"),
+                              #ColSideColors=rcw,
+                              cex.var=0.2,
+                              scale="none",xlab="sample",ylab="",
+                              labCol = rep("",nrow(tab)),
+                              main="LGG log2-transformed normalized counts\nhuman histone genes")
+dev.off()
+
+#prepare for ggplot2
+library(dplyr)
+library(ggplot2)
+library(reshape2)
+
+tab <- data.frame(tab)
+tab$id <- unlist(lapply(strsplit(rownames(tab), "\\|"), function(x) x[1]))
+mtab <- melt(tab)
+ggplot(mtab, aes(x = id, y = value)) + geom_boxplot() + theme(axis.text.x = element_text(angle = 90, size = 6))
 
 
 #-----------------------------------------------------------------

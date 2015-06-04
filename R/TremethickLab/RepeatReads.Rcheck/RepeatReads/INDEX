@@ -1,0 +1,4 @@
+RepeatRead              Creates an object of class "RepeatRead"
+RepeatRead-class        Class '"RepeatRead"'
+RepeatReads-package     RepeatReads: Track and analyse multi-mapped
+                        reads across repeat elements.
