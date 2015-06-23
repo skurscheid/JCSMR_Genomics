@@ -1,4 +1,4 @@
- #  interactome_metabolic_proteins_network_analysis.R
+#  interactome_metabolic_proteins_network_analysis.R
 #
 #  Copyright 2014 Sebastian Kurscheid <sebastian.kurscheid@anu.edu.au>
 #  
@@ -29,7 +29,7 @@ library("KEGGREST")
 library("ggplot2")
 library("gplots")
 library("grid")
-librar("scales")
+library("scales")
 
 source("/Users/u1001407/Dropbox/Development/GeneralPurpose/R/map_market_V2.R")
 
