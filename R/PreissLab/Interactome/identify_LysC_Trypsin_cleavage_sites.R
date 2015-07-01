@@ -26,8 +26,8 @@ library("gdata")
 library("Biostrings")
 
 # cardiomyocyte data
-RBDpep <- read.xls("/Users/u1001407/Dropbox/REM project-Sebastian/RBDmap peptides statistics.xlsx", sheet = 1, as.is = T)
-RBDpep.Sequence.trimmed <- trimLRPatterns(Rpattern = "K", subject = RBDpep$RBDpep.Sequence)
+RBDpep <- read.xls("/Users/u1001407/Dropbox/REM project-Sebastian/RBDpep analysis/HL-1 RBDmap peptide.xlsx", sheet = 1, as.is = T)
+RBDpep.Sequence.trimmed <- trimLRPatterns(Rpattern = "K", subject = RBDpep$Sequence)
 RBDpep.Sequence.trimmed <- trimLRPatterns(Rpattern = "R", subject = RBDpep.Sequence.trimmed)
 RBDpep.Sequence.trimmed.K <- sapply(RBDpep.Sequence.trimmed, function(x) matchPattern("K", x))
 RBDpep.Sequence.trimmed.R <- sapply(RBDpep.Sequence.trimmed, function(x) matchPattern("R", x))
@@ -35,16 +35,16 @@ RBDpep.Sequence.trimmed.K.found <- unlist(lapply(RBDpep.Sequence.trimmed.K, func
 RBDpep.Sequence.trimmed.R.found <- unlist(lapply(RBDpep.Sequence.trimmed.R, function(x) length(x@ranges)))
 RBDpep$K_found <- as.integer(RBDpep.Sequence.trimmed.K.found)
 RBDpep$R_found <- as.integer(RBDpep.Sequence.trimmed.R.found)
-write.csv(RBDpep, file = "/Users/u1001407/Dropbox/REM project-Sebastian/RBDmap peptides statistics w cleavage site search.csv")
+write.csv(RBDpep, file = "/Users/u1001407/Dropbox/REM project-Sebastian/RBDpep analysis/RBDmap peptides statistics w cleavage site search.csv")
 
 # HeLa cell data
-HeLa.RBDpep <- read.xls("/Users/u1001407/Dropbox/REM project-Sebastian/HeLa RBDpep statistics.xlsx", sheet = 1, as.is = T)
+HeLa.RBDpep <- read.xls("/Users/u1001407/Dropbox/REM project-Sebastian/RBDpep analysis/HeLa RBDmap peptides.xlsx", sheet = 1, as.is = T)
 HeLa.RBDpep <- HeLa.RBDpep[!is.na(HeLa.RBDpep$fragmentSequence),]
-HeLa.RBDpep.match <- apply(HeLa.RBDpep, 1, function(x) matchPattern(x["RBDpep.Sequence"], subject = AAString(x["fragmentSequence"])))
+HeLa.RBDpep.match <- apply(HeLa.RBDpep, 1, function(x) matchPattern(x["Sequence"], subject = AAString(x["fragmentSequence"])))
 HeLa.RBDpep.match.id <- unlist(lapply(HeLa.RBDpep.match, function(x) {x@ranges@width / x@subject@length}))
 HeLa.RBDpep$Percent_ID <- HeLa.RBDpep.match.id * 100
 
-HeLa.RBDpep.Sequence.trimmed <- trimLRPatterns(Rpattern = "K", subject = HeLa.RBDpep$RBDpep.Sequence)
+HeLa.RBDpep.Sequence.trimmed <- trimLRPatterns(Rpattern = "K", subject = HeLa.RBDpep$Sequence)
 HeLa.RBDpep.Sequence.trimmed <- trimLRPatterns(Rpattern = "R", subject = HeLa.RBDpep.Sequence.trimmed)
 HeLa.RBDpep.Sequence.trimmed.K <- sapply(HeLa.RBDpep.Sequence.trimmed, function(x) matchPattern("K", x))
 HeLa.RBDpep.Sequence.trimmed.R <- sapply(HeLa.RBDpep.Sequence.trimmed, function(x) matchPattern("R", x))
@@ -52,4 +52,4 @@ HeLa.RBDpep.Sequence.trimmed.K.found <- unlist(lapply(HeLa.RBDpep.Sequence.trimm
 HeLa.RBDpep.Sequence.trimmed.R.found <- unlist(lapply(HeLa.RBDpep.Sequence.trimmed.R, function(x) length(x@ranges)))
 HeLa.RBDpep$K_found <- as.integer(HeLa.RBDpep.Sequence.trimmed.K.found)
 HeLa.RBDpep$R_found <- as.integer(HeLa.RBDpep.Sequence.trimmed.R.found)
-write.csv(HeLa.RBDpep, file = "/Users/u1001407/Dropbox/REM project-Sebastian/HeLa RBDpep statistics with cleavage sites.csv")
+write.csv(HeLa.RBDpep, file = "/Users/u1001407/Dropbox/REM project-Sebastian/RBDpep analysis/HeLa RBDpep statistics with cleavage sites.csv")
