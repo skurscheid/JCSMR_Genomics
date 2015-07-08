@@ -19,9 +19,6 @@
 #  
 
 #---------load libraries--------------
-library("KEGGgraph")
-library("KEGG.db")
-library("reactome.db")
 library("biomaRt")
 library("gdata")
 library("GO.db")
@@ -30,8 +27,6 @@ library("ggplot2")
 library("gplots")
 library("grid")
 library("scales")
-
-source("/Users/u1001407/Dropbox/Development/GeneralPurpose/R/map_market_V2.R")
 
 #---------custom functions------------
 keggConv.batch <- function(x, max = 100, org = "mmu", id.type = "ncbi-geneid") {
