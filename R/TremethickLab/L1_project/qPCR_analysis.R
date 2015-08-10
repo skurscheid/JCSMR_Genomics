@@ -30,7 +30,7 @@ canonicalChr <- c(seq(1,19), "X", "Y", "M")
 
 #---------LINE-1 5' UTR amplicon locations----------------
 
-# First 5UTR primer pair
+#---------First 5UTR primer pair--------------------------
 qPCR.targets <- read.xls("Genome Location of LINE Primers - edited.xlsx", sheet = 1, as.is = T)
 qPCR.targets <- data.frame(as.character(qPCR.targets[,1]))
 qPCR.targets <- data.frame(as.character(qPCR.targets[grep("chr", qPCR.targets[,1]), ]))
@@ -50,7 +50,7 @@ gr.qPCR.LINE1.5UTR1 <- GRanges(qPCR.targets$chr, IRanges(start = qPCR.targets$st
 seqlevels(gr.qPCR.LINE1.5UTR1, force = T) <- canonicalChr
 gr.qPCR.LINE1.5UTR1$id <- "5UTR1"
 
-# Second 5UTR primer pair
+#---------Second 5UTR primer pair-------------
 qPCR.targets <- read.xls("Genome Location of LINE Primers - edited.xlsx", sheet = 2, as.is = T)
 qPCR.targets <- data.frame(as.character(qPCR.targets[,1]))
 qPCR.targets <- data.frame(as.character(qPCR.targets[grep("chr", qPCR.targets[,1]), ]))
@@ -69,7 +69,7 @@ gr.qPCR.LINE1.5UTR2 <- GRanges(qPCR.targets$chr, IRanges(start = qPCR.targets$st
 seqlevels(gr.qPCR.LINE1.5UTR2, force = T) <- canonicalChr
 gr.qPCR.LINE1.5UTR2$id <- "5UTR2"
 
-# Third 5UTR primer pair
+#---------Third 5UTR primer pair-------------
 qPCR.targets <- read.xls("Genome Location of LINE Primers - edited.xlsx", sheet = 3, as.is = T)
 qPCR.targets <- data.frame(as.character(qPCR.targets[,1]))
 qPCR.targets <- data.frame(as.character(qPCR.targets[grep("chr", qPCR.targets[,1]), ]))
@@ -88,7 +88,10 @@ gr.qPCR.LINE1.5UTR3 <- GRanges(qPCR.targets$chr, IRanges(start = qPCR.targets$st
 seqlevels(gr.qPCR.LINE1.5UTR3, force = T) <- canonicalChr
 gr.qPCR.LINE1.5UTR3$id <- "5UTR3"
 
-# L1ORF1A primer pair
+gr.qPCR.LINE1.5UTR <- reduce(c(gr.qPCR.LINE1.5UTR1, gr.qPCR.LINE1.5UTR2, gr.qPCR.LINE1.5UTR3))
+gr.qPCR.LINE1.5UTR$id <- "5UTR"
+
+#---------L1ORF1A primer pair-----------
 qPCR.targets <- read.xls("Genome Location of LINE Primers - edited.xlsx", sheet = 4, as.is = T)
 qPCR.targets <- data.frame(as.character(qPCR.targets[,1]))
 qPCR.targets <- data.frame(as.character(qPCR.targets[grep("chr", qPCR.targets[,1]), ]))
@@ -107,7 +110,7 @@ gr.qPCR.LINE1.L1ORF1A <- GRanges(qPCR.targets$chr, IRanges(start = qPCR.targets$
 seqlevels(gr.qPCR.LINE1.L1ORF1A, force = T) <- canonicalChr
 gr.qPCR.LINE1.L1ORF1A$id <- "L1ORF1A"
 
-# L1ORF1B primer pair
+#---------L1ORF1B primer pair--------------
 qPCR.targets <- read.xls("Genome Location of LINE Primers - edited.xlsx", sheet = 5, as.is = T)
 qPCR.targets <- data.frame(as.character(qPCR.targets[,1]))
 qPCR.targets <- data.frame(as.character(qPCR.targets[grep("chr", qPCR.targets[,1]), ]))
@@ -154,6 +157,12 @@ gr.qPCR.LINE1.L1ORF2B <- GRanges(qPCR.targets$chr, IRanges(start = qPCR.targets$
 seqlevels(gr.qPCR.LINE1.L1ORF2B, force = T) <- canonicalChr
 gr.qPCR.LINE1.L1ORF2B$id <- "L1ORF2B"
 
+gr.qPCR.LINE1.L1ORF1 <- reduce(c(gr.qPCR.LINE1.L1ORF1A, gr.qPCR.LINE1.L1ORF1B))
+gr.qPCR.LINE1.L1ORF1$id <- "L1ORF1"
+
+gr.qPCR.LINE1.L1ORF2 <- reduce(c(gr.qPCR.LINE1.L1ORF2A, gr.qPCR.LINE1.L1ORF2B))
+gr.qPCR.LINE1.L1ORF2$id <- "L1ORF2"
+
 # L1Md_A2 primer pair
 qPCR.targets <- read.xls("Genome Location of LINE Primers - edited.xlsx", sheet = 8, as.is = T, skip = 1)
 qPCR.targets <- qPCR.targets[,-c(1:8, 13)]
@@ -164,14 +173,14 @@ seqlevels(gr.qPCR.LINE1.L1Md_A2, force = T) <- canonicalChr
 gr.qPCR.LINE1.L1Md_A2$id <- "L1Md_A2"
 
 # combine all into one
-gr.qPCR.LINE1 <- c(gr.qPCR.LINE1.5UTR1, gr.qPCR.LINE1.5UTR2, gr.qPCR.LINE1.5UTR3, gr.qPCR.LINE1.L1ORF1A, gr.qPCR.LINE1.L1ORF1B, gr.qPCR.LINE1.L1ORF2A, gr.qPCR.LINE1.L1ORF2B, gr.qPCR.LINE1.L1Md_A2)
+gr.qPCR.LINE1 <- c(gr.qPCR.LINE1.5UTR, gr.qPCR.LINE1.L1ORF1, gr.qPCR.LINE1.L1ORF2, gr.qPCR.LINE1.L1Md_A2)
 
 # change seqlevels to UCSC encoding
 gr.qPCR.LINE1.ucsc <- gr.qPCR.LINE1
 seqlevels(gr.qPCR.LINE1.ucsc) <- paste("chr", as.character(seqlevels(gr.qPCR.LINE1)), sep = "")
 names(gr.qPCR.LINE1.ucsc) <- paste(gr.qPCR.LINE1.ucsc$id, seqnames(gr.qPCR.LINE1.ucsc), start(gr.qPCR.LINE1.ucsc), end(gr.qPCR.LINE1.ucsc), sep = "_")
 gs1 <- getSeq(BSgenome.Mmusculus.UCSC.mm10, gr.qPCR.LINE1.ucsc)
-export(gs1, "qPCRTargets.fasta")
+export(gs1, "qPCRTargets_reduced.fasta")
 
 #----------load alignments from BAM file--------------
 G1_H2AZ <- ("G1_H2AZ_multimapped.sorted.bam")

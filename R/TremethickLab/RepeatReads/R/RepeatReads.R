@@ -24,3 +24,5 @@ RepeatRead <- setRefClass("RepeatRead",
       names(repFamily[which(repFamily == 1)])
     }
   ))
+
+
