@@ -521,7 +521,12 @@ input.tgfb.rep2.scale.cds <- 1000000/length(input.tgfb.rep2.cds)
 cov.input.wt.cds <- (coverage(input.wt.rep1.cds) * input.wt.rep1.scale.cds + coverage(input.wt.rep2.cds) * input.wt.rep2.scale.cds) / 2
 cov.input.tgfb.cds <- (coverage(input.tgfb.rep1.cds) * input.tgfb.rep1.scale.cds + coverage(input.tgfb.rep2.cds) * input.tgfb.rep2.scale.cds) / 2
 
-#----------preparing data for plotting of CDS sequencing coverage--------------
+#----------Table with start/end position of CDS for plotting------------------------------------------
+cdsTab <- rbind(mesenchymalMarkers.tab, epithelialMarkers.tab)
+cdsTab$promoter_start_position <- start(gr.which.tss)
+cdsTab$promoter_end_position <- end(gr.which.tss)
+
+#----------preparing data for plotting of CDS sequencing coverage-------------------------------------
 # creating single-bp level windows for visualization
 gr.which.tiles <- tile(gr.which, width = 1) # width = bin size
 gr.which.tiles <- unlist(gr.which.tiles)
@@ -552,3 +557,115 @@ bA.cov.input.wt.tss.cds <- subsetByOverlaps(bA.cov.input.wt.cds, gr.which.tss.no
 bA.cov.input.tgfb.tss.cds <- subsetByOverlaps(bA.cov.input.tgfb.cds, gr.which.tss.nostrand)
 bA.cov.h2az.wt.tss.cds <- subsetByOverlaps(bA.cov.h2az.wt.cds, gr.which.tss.nostrand)
 bA.cov.h2az.tgfb.tss.cds <- subsetByOverlaps(bA.cov.h2az.tgfb.cds, gr.which.tss.nostrand)
+
+#----------plotting reads across the complete CDSs-----------------------------------
+
+dT.cov.input.wt.cds <- DataTrack(bA.cov.input.wt.cds, type = "h", col = "darkgreen", name = "Input WT [rpm]")
+dT.cov.input.tgfb.cds <- DataTrack(bA.cov.input.tgfb.cds, type = "h", col = "lightgreen", name = "Input TGFb [rpm]")
+dT.cov.h2az.wt.cds <- DataTrack(bA.cov.h2az.wt.cds, type = "h", col = "darkred", name = "H2AZ WT [rpm]")
+dT.cov.h2az.tgfb.cds <- DataTrack(bA.cov.h2az.tgfb.cds, type = "h", col = "red", name = "H2AZ TGFb [rpm]")
+
+dT.cov.input.wt.tss.cds <- DataTrack(bA.cov.input.wt.tss.cds, type = "h", col = "darkgreen", name = "Input WT TSS1500 [rpm]")
+dT.cov.input.tgfb.tss.cds <- DataTrack(bA.cov.input.tgfb.tss.cds, type = "h", col = "lightgreen", name = "Input TGFb TSS1500 [rpm]")
+dT.cov.h2az.wt.tss.cds <- DataTrack(bA.cov.h2az.wt.tss.cds, type = "h", col = "darkred", name = "H2AZ WT TSS1500 [rpm]")
+dT.cov.h2az.tgfb.tss.cds <- DataTrack(bA.cov.h2az.tgfb.tss.cds, type = "h", col = "red", name = "H2AZ TGFb TSS1500 [rpm]")
+
+displayPars(dT.cov.input.wt.cds) <- list("fontcolor.title" = "black", "background.title" = "white", "col.axis" = "black", "col.frame" = "white")
+displayPars(dT.cov.input.tgfb.cds) <- list("fontcolor.title" = "black", "background.title" = "white", "col.axis" = "black", "col.frame" = "white")
+displayPars(dT.cov.h2az.wt.cds) <- list("fontcolor.title" = "black", "background.title" = "white", "col.axis" = "black", "col.frame" = "white")
+displayPars(dT.cov.h2az.tgfb.cds) <- list("fontcolor.title" = "black", "background.title" = "white", "col.axis" = "black", "col.frame" = "white")
+displayPars(dT.cov.input.wt.tss.cds) <- list("fontcolor.title" = "black", "background.title" = "white", "col.axis" = "black", "col.frame" = "white")
+displayPars(dT.cov.input.tgfb.tss.cds) <- list("fontcolor.title" = "black", "background.title" = "white", "col.axis" = "black", "col.frame" = "white")
+displayPars(dT.cov.h2az.wt.tss.cds) <- list("fontcolor.title" = "black", "background.title" = "white", "col.axis" = "black", "col.frame" = "white")
+displayPars(dT.cov.h2az.tgfb.tss.cds) <- list("fontcolor.title" = "black", "background.title" = "white", "col.axis" = "black", "col.frame" = "white")
+
+displayPars(aT.primers) <- list("fontcolor.title" = "black", "background.title" = "white", "col.axis" = "black", "col.frame" = "white")
+displayPars(aT.captureProbes) <- list("fontcolor.title" = "black", "background.title" = "white", "col.axis" = "black", "col.frame" = "white")
+
+cdsTab <- designTab
+cdsTab[order(cdsTab$marker, decreasing = T),]$start_position <- start(gr.which.cds)
+cdsTab[order(cdsTab$marker, decreasing = T),]$end_position <- end(gr.which.cds)
+
+for(i in 1:nrow(cdsTab)){
+  if (cdsTab[i,]$hgnc_symbol %in% subsetByOverlaps(gr.which.tss.nostrand, gr.which)$hgnc_symbol){
+    chromosome(dT.cov.input.wt.cds) <- as(cdsTab[i, "chromosome_name"], "integer")
+    chromosome(dT.cov.input.tgfb.cds) <- as(cdsTab[i, "chromosome_name"], "integer")
+    chromosome(dT.cov.h2az.wt.cds) <- as(cdsTab[i, "chromosome_name"], "integer")
+    chromosome(dT.cov.h2az.tgfb.cds) <- as(cdsTab[i, "chromosome_name"], "integer")
+    
+    chromosome(dT.cov.input.wt.tss.cds) <- as(cdsTab[i, "chromosome_name"], "integer")
+    chromosome(dT.cov.input.tgfb.tss.cds) <- as(cdsTab[i, "chromosome_name"], "integer")
+    chromosome(dT.cov.h2az.wt.tss.cds) <- as(cdsTab[i, "chromosome_name"], "integer")
+    chromosome(dT.cov.h2az.tgfb.tss.cds) <- as(cdsTab[i, "chromosome_name"], "integer")
+    
+    chromosome(aT.primers) <- as(cdsTab[i, "chromosome_name"], "integer")
+    chromosome(aT.captureProbes) <- as(cdsTab[i, "chromosome_name"], "integer")
+    
+    max.y.cds <- max(max(values(dT.cov.input.wt.cds)), max(values(dT.cov.input.tgfb.cds)), max(values(dT.cov.h2az.wt.cds)), max(values(dT.cov.h2az.tgfb.cds)))
+    displayPars(dT.cov.input.wt.cds) <- list(ylim = c(0,max.y.cds))
+    displayPars(dT.cov.input.tgfb.cds) <- list(ylim = c(0,max.y.cds))
+    displayPars(dT.cov.h2az.wt.cds) <- list(ylim = c(0,max.y.cds))
+    displayPars(dT.cov.h2az.tgfb.cds) <- list(ylim = c(0,max.y.cds))
+    
+    max.y.tss.cds <- max(max(values(dT.cov.input.wt.tss.cds)), max(values(dT.cov.input.tgfb.tss.cds)), max(values(dT.cov.h2az.wt.tss.cds)), max(values(dT.cov.h2az.tgfb.tss.cds)))
+    displayPars(dT.cov.input.wt.tss.cds) <- list(ylim = c(0,max.y.tss.cds))
+    displayPars(dT.cov.input.tgfb.tss.cds) <- list(ylim = c(0,max.y.tss.cds))
+    displayPars(dT.cov.h2az.wt.tss.cds) <- list(ylim = c(0,max.y.tss.cds))
+    displayPars(dT.cov.h2az.tgfb.tss.cds) <- list(ylim = c(0,max.y.tss.cds))
+    
+    # Annotation of the gene region
+    biomTrack <- BiomartGeneRegionTrack(genome = "canFam3", chromosome = as(cdsTab[i, "chromosome_name"], "integer"), start = as.integer(cdsTab[i, "promoter_start_position"]), end = as.integer(cdsTab[i, "promoter_end_position"]), name = paste(cdsTab[i, "hgnc_symbol"], sep = ""), mart = dog)
+    displayPars(biomTrack) <- list(showFeatureId = TRUE, showId = TRUE, "fontcolor.title" = "black", "background.title" = "white", "col.axis" = "black", "col.frame" = "white")
+    
+    # plotting at two different levels of resolution (full capture region & TSS)
+    ncols <- 1
+    nrows <- 2
+   # pdf(file = paste(as(cdsTab[i,"marker"], "character"), "_", as(cdsTab[i,"hgnc_symbol"], "character"), "_combined_CDS", ".pdf", sep = ""), width = 12, height = 18)
+    grid.newpage()
+    pushViewport(viewport(layout = grid.layout(nrows, ncols)))
+    
+    axisTrack <- GenomeAxisTrack()
+    pushViewport(viewport(layout.pos.col = ncols, layout.pos.row = 1))
+    plotTracks(main = paste("Coverage ", as(cdsTab[i,"marker"], "character"), " ", as(cdsTab[i,"hgnc_symbol"], "character"), " CDS", sep = ""),
+               list(axisTrack, 
+                    biomTrack,
+                    aT.primers,
+                    aT.captureProbes,
+                    dT.cov.input.wt.cds,
+                    dT.cov.h2az.wt.cds,
+                    dT.cov.input.tgfb.cds,
+                    dT.cov.h2az.tgfb.cds
+               ), 
+               chromosome = cdsTab[i, "chromosome_name"], 
+               from = as(cdsTab[i, "start_position"], "integer"), 
+               to = as(cdsTab[i, "end_position"], "integer"), 
+               extend.left = 2500, 
+               extend.right = 2500,
+               add = TRUE, 
+               littleTicks = TRUE, 
+               scale = 0.5)
+    popViewport(1)
+    pushViewport(viewport(layout.pos.col = ncols, layout.pos.row = 2))
+    plotTracks(main = paste("Coverage ", as(cdsTab[i,"marker"], "character"), " ", as(cdsTab[i,"hgnc_symbol"], "character"), " TSS1500", sep = ""),
+               list(axisTrack, 
+                    biomTrack,
+                    aT.primers,
+                    dT.cov.input.wt.tss.cds,
+                    dT.cov.h2az.wt.tss.cds,
+                    dT.cov.input.tgfb.tss.cds,
+                    dT.cov.h2az.tgfb.tss.cds
+               ), 
+               chromosome = cdsTab[i, "chromosome_name"], 
+               from = as(cdsTab[i, "promoter_start_position"], "integer"), 
+               to = as(cdsTab[i, "promoter_end_position"], "integer"), 
+               extend.left = 2500, 
+               extend.right = 2500,
+               add = TRUE, 
+               littleTicks = TRUE, 
+               scale = 0.5)
+    popViewport(1)
+ #   dev.off()
+  } else {
+    print("Wrong TSS")
+  }
+}
