@@ -620,7 +620,7 @@ for(i in 1:nrow(cdsTab)){
     # plotting at two different levels of resolution (full capture region & TSS)
     ncols <- 1
     nrows <- 2
-   # pdf(file = paste(as(cdsTab[i,"marker"], "character"), "_", as(cdsTab[i,"hgnc_symbol"], "character"), "_combined_CDS", ".pdf", sep = ""), width = 12, height = 18)
+    pdf(file = paste(as(cdsTab[i,"marker"], "character"), "_", as(cdsTab[i,"hgnc_symbol"], "character"), "_combined_CDS", ".pdf", sep = ""), width = 12, height = 18)
     grid.newpage()
     pushViewport(viewport(layout = grid.layout(nrows, ncols)))
     
@@ -664,7 +664,7 @@ for(i in 1:nrow(cdsTab)){
                littleTicks = TRUE, 
                scale = 0.5)
     popViewport(1)
- #   dev.off()
+    dev.off()
   } else {
     print("Wrong TSS")
   }
