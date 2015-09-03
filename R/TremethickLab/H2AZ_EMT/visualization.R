@@ -239,21 +239,6 @@ bA.cov.input.tgfb <- binnedAverage(gr.which.tiles, cov.input.tgfb, "mean")
 bA.cov.h2az.wt <- binnedAverage(gr.which.tiles, cov.h2az.wt, "mean")
 bA.cov.h2az.tgfb <- binnedAverage(gr.which.tiles, cov.h2az.tgfb, "mean")
 
-# enrichment
-cov.enrich.h2az.wt <- cov.h2az.wt - cov.input.wt
-cov.enrich.h2az.tgfb <- cov.h2az.tgfb - cov.input.tgfb
-
-bA.cov.enrich.h2az.wt <- binnedAverage(gr.which.tiles, cov.enrich.h2az.wt, "mean")
-bA.cov.enrich.h2az.tgfb <- binnedAverage(gr.which.tiles, cov.enrich.h2az.tgfb, "mean")
-  
-bA.cov.input.wt.tss <- subsetByOverlaps(bA.cov.input.wt, gr.which.tss.nostrand)
-bA.cov.input.tgfb.tss <- subsetByOverlaps(bA.cov.input.tgfb, gr.which.tss.nostrand)
-bA.cov.h2az.wt.tss <- subsetByOverlaps(bA.cov.h2az.wt, gr.which.tss.nostrand)
-bA.cov.h2az.tgfb.tss <- subsetByOverlaps(bA.cov.h2az.tgfb, gr.which.tss.nostrand)
-
-bA.cov.enrich.h2az.wt.tss <- subsetByOverlaps(bA.cov.enrich.h2az.wt, gr.which.tss.nostrand)
-bA.cov.enrich.h2az.tgfb.tss <- subsetByOverlaps(bA.cov.enrich.h2az.tgfb, gr.which.tss.nostrand)
-
 #----------preparing data for plotting of dyad coverage--------------
 gr.which.tiles <- tile(gr.which, width = 10L) # width = bin size
 gr.which.tiles <- resize(gr.which.tiles, 100L)
