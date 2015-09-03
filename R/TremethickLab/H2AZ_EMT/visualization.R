@@ -1,7 +1,3 @@
-# TODO: 
-# include amplicons for ChIP-qPCR
-# change y-axis scale for TSS1500 region
-
 # load libraries
 library("gdata")
 library("Gviz")
