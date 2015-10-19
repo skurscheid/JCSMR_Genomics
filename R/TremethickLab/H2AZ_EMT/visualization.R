@@ -239,52 +239,6 @@ bA.cov.input.tgfb <- binnedAverage(gr.which.tiles, cov.input.tgfb, "mean")
 bA.cov.h2az.wt <- binnedAverage(gr.which.tiles, cov.h2az.wt, "mean")
 bA.cov.h2az.tgfb <- binnedAverage(gr.which.tiles, cov.h2az.tgfb, "mean")
 
-#----------preparing data for plotting of dyad coverage--------------
-gr.which.tiles <- tile(gr.which, width = 10L) # width = bin size
-gr.which.tiles <- resize(gr.which.tiles, 100L)
-gr.which.tiles <- unlist(gr.which.tiles)
-# if(length(grep("chr", seqlevels(gr.which.tiles))) == 0){
-#   seqlevels(gr.which.tiles, force = T) <- paste("chr", seqlevels(gr.which.tiles), sep = "")
-# }
-seqlevels(gr.which.tiles, force = T) <- seqlevels(gr.which.tiles)[order(seqlevels(gr.which.tiles))]
-
-seqlevels(gr.input.wt.rep1, force = T) <- seqlevels(gr.which.tiles)
-seqlevels(gr.input.wt.rep2, force = T) <- seqlevels(gr.which.tiles)
-seqlevels(gr.input.tgfb.rep1, force = T) <- seqlevels(gr.which.tiles)
-seqlevels(gr.input.tgfb.rep2, force = T) <- seqlevels(gr.which.tiles)
-seqlevels(gr.h2az.wt.rep1, force = T) <- seqlevels(gr.which.tiles)
-seqlevels(gr.h2az.wt.rep2, force = T) <- seqlevels(gr.which.tiles)
-seqlevels(gr.h2az.tgfb.rep1, force = T) <- seqlevels(gr.which.tiles)
-seqlevels(gr.h2az.tgfb.rep2, force = T) <- seqlevels(gr.which.tiles)
-
-cov.dyad.input.wt <- ((coverage(gr.input.wt.rep1) * input.wt.rep1.scale) + (coverage(gr.input.wt.rep2) * input.wt.rep2.scale)) / 2
-cov.dyad.input.tgfb <- ((coverage(gr.input.tgfb.rep1) * input.tgfb.rep1.scale) + (coverage(gr.input.tgfb.rep2) * input.tgfb.rep2.scale)) / 2
-
-cov.dyad.h2az.wt <- ((coverage(gr.h2az.wt.rep1) * h2az.wt.rep1.scale) + (coverage(gr.h2az.wt.rep2) * h2az.wt.rep2.scale)) / 2
-cov.dyad.h2az.tgfb <- ((coverage(gr.h2az.tgfb.rep1) * h2az.tgfb.rep1.scale) + (coverage(gr.h2az.tgfb.rep2) * h2az.tgfb.rep2.scale)) / 2
-
-cov.dyad.input.wt <- cov.dyad.input.wt[which(names(cov.dyad.input.wt) %in% seqlevels(gr.which.tiles))]
-cov.dyad.input.wt <- cov.dyad.input.wt[names(cov.dyad.input.wt)[order(names(cov.dyad.input.wt))]]
-
-cov.dyad.input.tgfb <- cov.dyad.input.tgfb[which(names(cov.dyad.input.tgfb) %in% seqlevels(gr.which.tiles))]
-cov.dyad.input.tgfb <- cov.dyad.input.tgfb[names(cov.dyad.input.tgfb)[order(names(cov.dyad.input.tgfb))]]
-
-cov.dyad.h2az.wt <- cov.dyad.h2az.wt[which(names(cov.dyad.h2az.wt) %in% seqlevels(gr.which.tiles))]
-cov.dyad.h2az.wt <- cov.dyad.h2az.wt[names(cov.dyad.h2az.wt)[order(names(cov.dyad.h2az.wt))]]
-
-cov.dyad.h2az.tgfb <- cov.dyad.h2az.tgfb[which(names(cov.dyad.h2az.tgfb) %in% seqlevels(gr.which.tiles))]
-cov.dyad.h2az.tgfb <- cov.dyad.h2az.tgfb[names(cov.dyad.h2az.tgfb)[order(names(cov.dyad.h2az.tgfb))]]
-
-bS.dyad.cov.input.wt <- binnedAverage(gr.which.tiles, cov.dyad.input.wt, "sum")
-bS.dyad.cov.input.tgfb <- binnedAverage(gr.which.tiles, cov.dyad.input.tgfb, "sum")
-bS.dyad.cov.h2az.wt <- binnedAverage(gr.which.tiles, cov.dyad.h2az.wt, "sum")
-bS.dyad.cov.h2az.tgfb <- binnedAverage(gr.which.tiles, cov.dyad.h2az.tgfb, "sum")
-
-bS.dyad.cov.input.wt.tss <- subsetByOverlaps(bS.dyad.cov.input.wt, gr.which.tss.nostrand)
-bS.dyad.cov.input.tgfb.tss <- subsetByOverlaps(bS.dyad.cov.input.tgfb, gr.which.tss.nostrand)
-bS.dyad.cov.h2az.wt.tss <- subsetByOverlaps(bS.dyad.cov.h2az.wt, gr.which.tss.nostrand)
-bS.dyad.cov.h2az.tgfb.tss <- subsetByOverlaps(bS.dyad.cov.h2az.tgfb, gr.which.tss.nostrand)
-
 #----------Using Gviz for visualization----------------------------------------
 # reads across the whole capture region (40kb)
 # # sequencing coverage
@@ -399,70 +353,6 @@ for(i in 1:nrow(designTab)){
   }
 }
 
-#--------dyad coverage-------
-dT.cov.dyad.input.wt <- DataTrack(bS.dyad.cov.input.wt, type = "h", col = "darkgreen", name = "Input WT Dyads [fragments]")
-dT.cov.dyad.input.tgfb <- DataTrack(bS.dyad.cov.input.tgfb, type = "h", col = "lightgreen", name = "Input TGFb Dyads [fragments]")
-dT.cov.dyad.h2az.wt <- DataTrack(bS.dyad.cov.h2az.wt, type = "h", col = "darkred", name = "H2AZ WT Dyads [fragments]")
-dT.cov.dyad.h2az.tgfb <- DataTrack(bS.dyad.cov.h2az.tgfb, type = "h", col = "red", name = "H2AZ TGFb Dyads [fragments]")
-
-apply(designTab[1,], 1, function(x){
-  chromosome(dT.cov.dyad.input.wt) <- x["chromosome_name"]
-  chromosome(dT.cov.dyad.input.tgfb) <- x["chromosome_name"]
-  chromosome(dT.cov.dyad.h2az.wt) <- x["chromosome_name"]
-  chromosome(dT.cov.dyad.h2az.tgfb) <- x["chromosome_name"]
-  
-  wt.max.y <- max(max(values(dT.cov.dyad.input.wt)), max(values(dT.cov.dyad.h2az.wt)))
-  tgfb.max.y <- max(max(values(dT.cov.dyad.input.tgfb)), max(values(dT.cov.dyad.h2az.tgfb)))
-  
-  displayPars(dT.cov.dyad.input.wt) <- list(ylim = c(0,wt.max.y))
-  displayPars(dT.cov.dyad.input.tgfb) <- list(ylim = c(0,tgfb.max.y))
-  displayPars(dT.cov.dyad.h2az.wt) <- list(ylim = c(0,wt.max.y))
-  displayPars(dT.cov.dyad.h2az.tgfb) <- list(ylim = c(0,tgfb.max.y))
-  
-  #pdf(file = paste("dyads_", as(x["marker"], "character"), "_", as(x["hgnc_symbol"], "character"), ".pdf", sep = ""), width = 35, height = 18)
-  biomTrack <- BiomartGeneRegionTrack(genome = "canFam3", chromosome = as.character(x["chromosome_name"]), start = as.integer(x["start_position"]), end = as.integer(x["end_position"]), name = paste(x["hgnc_symbol"], sep = ""))
-  displayPars(biomTrack) <- list(showFeatureId = TRUE, showId = TRUE)
-  plotTracks(main = paste("Dyads ", as(x["marker"], "character"), " ", as(x["hgnc_symbol"], "character"), sep = ""),
-             list(biomTrack, dT.cov.dyad.input.wt, dT.cov.dyad.h2az.wt, dT.cov.dyad.input.tgfb, dT.cov.dyad.h2az.tgfb),
-             chromosome = x["chromosome_name"], from = as(x["start_position"], "integer"), to = as(x["end_position"], "integer"), extend.left = 2500, extend.right = 2500)
-  #dev.off()
-})
-
-
-# dyad coverage
-for (i in 1:nrow(designTab)){
-  chromosome(dT.cov.dyad.input.wt) <- designTab[i,"chromosome_name"]
-  chromosome(dT.cov.dyad.input.tgfb) <- designTab[i,"chromosome_name"]
-  chromosome(dT.cov.dyad.h2az.wt) <- designTab[i,"chromosome_name"]
-  chromosome(dT.cov.dyad.h2az.tgfb) <- designTab[i,"chromosome_name"]
-  
-  wt.max.y <- max(max(values(dT.cov.dyad.input.wt)), max(values(dT.cov.dyad.h2az.wt)))
-  tgfb.max.y <- max(max(values(dT.cov.dyad.input.tgfb)), max(values(dT.cov.dyad.h2az.tgfb)))
-  
-  displayPars(dT.cov.dyad.input.wt) <- list(ylim = c(0,wt.max.y))
-  displayPars(dT.cov.dyad.input.tgfb) <- list(ylim = c(0,tgfb.max.y))
-  displayPars(dT.cov.dyad.h2az.wt) <- list(ylim = c(0,wt.max.y))
-  displayPars(dT.cov.dyad.h2az.tgfb) <- list(ylim = c(0,tgfb.max.y))
-  
-  biomTrack <- BiomartGeneRegionTrack(genome = "canFam3", 
-                                      chromosome = designTab[i,"chromosome_name"], 
-                                      start = as.integer(designTab[i,"promoter_start_position"]),
-                                      end = as.integer(designTab[i,"promoter_end_position"]), 
-                                      name = paste(designTab[i,"hgnc_symbol"], sep = ""), 
-                                      mart = dog)
-  displayPars(biomTrack) <- list(showFeatureId = TRUE, showId = TRUE)
-  
-  pdf(file = paste("dyads_", as(designTab[i,"marker"], "character"), "_", as(designTab[i,"hgnc_symbol"], "character"), "_TSS1500", ".pdf", sep = ""), width = 18, height = 12)
-  plotTracks(main = paste("Dyad coverage ", as(designTab[i,"marker"], "character"), " ", as(designTab[i,"hgnc_symbol"], "character"), " TSS1500", sep = ""),
-             list(biomTrack, dT.cov.dyad.input.wt, dT.cov.dyad.h2az.wt, dT.cov.dyad.input.tgfb, dT.cov.dyad.h2az.tgfb),
-             chromosome = designTab[i,"chromosome_name"], from = as(designTab[i,"promoter_start_position"], "integer"), 
-             to = as(designTab[i,"promoter_end_position"], "integer"), 
-             extend.left = 500, 
-             extend.right = 500)
-  dev.off()
-  print(designTab[i,"hgnc_symbol"])
-}
-
 #----------H2AZ ChIP data across the complete CDSs-----------------------------------------------
 # load ChIP coverage from BAM files
 # if (length(grep("chr", seqlevels(gr.which))) > 0){
@@ -562,10 +452,6 @@ displayPars(dT.cov.h2az.tgfb.tss.cds) <- list("fontcolor.title" = "black", "back
 
 displayPars(aT.primers) <- list("fontcolor.title" = "black", "background.title" = "white", "col.axis" = "black", "col.frame" = "white")
 displayPars(aT.captureProbes) <- list("fontcolor.title" = "black", "background.title" = "white", "col.axis" = "black", "col.frame" = "white")
-
-cdsTab <- designTab
-cdsTab[order(cdsTab$marker, decreasing = T),]$start_position <- start(gr.which.cds)
-cdsTab[order(cdsTab$marker, decreasing = T),]$end_position <- end(gr.which.cds)
 
 for(i in 1:nrow(cdsTab)){
   if (cdsTab[i,]$hgnc_symbol %in% subsetByOverlaps(gr.which.tss.nostrand, gr.which)$hgnc_symbol){

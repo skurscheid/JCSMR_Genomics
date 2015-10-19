@@ -32,15 +32,27 @@ pwmList <- PWMatrixList(MA0488.1 = toPWM(PFMatrixList[["MA0488.1"]]),
                         PB0004.1 = toPWM(PFMatrixList[["PB0004.1"]]),
                         PB0108.1 = toPWM(PFMatrixList[["PB0108.1"]]), 
                         use.names = TRUE)
-subject <- genome$"1"
-sitesetList <- searchSeq(pwmList, subject, seqname = "1", min.score = "95%", strand = "*") 
-gr.ap1Sites <- c(as(sitesetList[[1]], "GRanges"),
-                 as(sitesetList[[2]], "GRanges"), 
-                 as(sitesetList[[3]], "GRanges"),
-                 as(sitesetList[[4]], "GRanges"))
+
+grl.ap1Sites <- GRangesList(sapply(cdsTab[cdsTab$hgnc_symbol %in% c("B9D2(TGFB1)", "ZEB1"),]$chromosome_name, function(x){
+  subject <- genome[[as(x, "character")]]
+  sitesetList <- searchSeq(pwmList, subject, seqname = as(x, "character"), min.score = "95%", strand = "*") 
+  gr.ap1Sites <- c(as(sitesetList[[1]], "GRanges"),
+                   as(sitesetList[[2]], "GRanges"), 
+                   as(sitesetList[[3]], "GRanges"),
+                   as(sitesetList[[4]], "GRanges"))
+  return(gr.ap1Sites)
+})
+)
+
+gr.ap1Sites <- unlist(grl.ap1Sites)
 gr.ap1Sites <- sort(gr.ap1Sites)
 gr.ap1Sites <- reduce(gr.ap1Sites)
-aT.ap1Sites <- AnnotationTrack(subsetByOverlaps(gr.ap1Sites, gr.which.cds), name = "AP1", col = "blue")
+# extend CDS by 10kb
+gr.which.cds.extd <- gr.which.cds
+start(gr.which.cds.extd) <- start(gr.which.cds.extd) - 10000
+end(gr.which.cds.extd) <- end(gr.which.cds.extd) + 10000
+aT.ap1Sites <- AnnotationTrack(subsetByOverlaps(gr.ap1Sites, gr.which.cds.extd), name = "AP1", col = "blue")
+
 displayPars(aT.ap1Sites) <- list("fontcolor.title" = "black", "background.title" = "white", "col.axis" = "black", "col.frame" = "white")
 
 #----------searching for NFKB sites-----------------------------------
@@ -56,12 +68,22 @@ pwmList <- PWMatrixList(MA0105.1 = toPWM(PFMatrixList[["MA0105.1"]]),
                         MA0105.2 = toPWM(PFMatrixList[["MA0105.2"]]),
                         MA0105.3 = toPWM(PFMatrixList[["MA0105.3"]]), 
                         use.names = TRUE)
-subject <- genome$"1"
-sitesetList <- searchSeq(pwmList, subject, seqname = "1", min.score = "95%", strand = "*") 
-gr.nfkbSites <- c(as(sitesetList[[1]], "GRanges"), as(sitesetList[[2]], "GRanges"), as(sitesetList[[3]], "GRanges"))
+
+grl.nfkbSites <- GRangesList(sapply(cdsTab[cdsTab$hgnc_symbol %in% c("B9D2(TGFB1)", "ZEB1"),]$chromosome_name, function(x){
+  subject <- genome[[as(x, "character")]]
+  sitesetList <- searchSeq(pwmList, subject, seqname = as(x, "character"), min.score = "95%", strand = "*") 
+  gr.nfkbSites <- c(as(sitesetList[[1]], "GRanges"),
+                   as(sitesetList[[2]], "GRanges"), 
+                   as(sitesetList[[3]], "GRanges"))
+  return(gr.nfkbSites)
+})
+)
+
+gr.nfkbSites <- unlist(grl.nfkbSites)
 gr.nfkbSites <- sort(gr.nfkbSites)
 gr.nfkbSites <- reduce(gr.nfkbSites)
-aT.nfkbSites <- AnnotationTrack(subsetByOverlaps(gr.nfkbSites, gr.which.cds), name = "NFKB", col = "salmon")
+aT.nfkbSites <- AnnotationTrack(subsetByOverlaps(gr.nfkbSites, gr.which.cds.extd), name = "NFKB", col = "salmon")
+
 displayPars(aT.nfkbSites) <- list("fontcolor.title" = "black", "background.title" = "white", "col.axis" = "black", "col.frame" = "white")
 
 #----------visualisation depends on visualization.R having run!---------
