@@ -33,7 +33,7 @@ pwmList <- PWMatrixList(MA0488.1 = toPWM(PFMatrixList[["MA0488.1"]]),
                         PB0108.1 = toPWM(PFMatrixList[["PB0108.1"]]), 
                         use.names = TRUE)
 
-grl.ap1Sites <- GRangesList(sapply(cdsTab[cdsTab$hgnc_symbol %in% c("B9D2(TGFB1)", "ZEB1"),]$chromosome_name, function(x){
+grl.ap1Sites <- GRangesList(sapply(seqlevels(gr.which), function(x){
   subject <- genome[[as(x, "character")]]
   sitesetList <- searchSeq(pwmList, subject, seqname = as(x, "character"), min.score = "95%", strand = "*") 
   gr.ap1Sites <- c(as(sitesetList[[1]], "GRanges"),
@@ -48,10 +48,7 @@ gr.ap1Sites <- unlist(grl.ap1Sites)
 gr.ap1Sites <- sort(gr.ap1Sites)
 gr.ap1Sites <- reduce(gr.ap1Sites)
 # extend CDS by 10kb
-gr.which.cds.extd <- gr.which.cds
-start(gr.which.cds.extd) <- start(gr.which.cds.extd) - 10000
-end(gr.which.cds.extd) <- end(gr.which.cds.extd) + 10000
-aT.ap1Sites <- AnnotationTrack(subsetByOverlaps(gr.ap1Sites, gr.which.cds.extd), name = "AP1", col = "blue")
+aT.ap1Sites <- AnnotationTrack(subsetByOverlaps(gr.ap1Sites, gr.which), name = "AP1", col = "blue")
 
 displayPars(aT.ap1Sites) <- list("fontcolor.title" = "black", "background.title" = "white", "col.axis" = "black", "col.frame" = "white")
 
@@ -69,20 +66,19 @@ pwmList <- PWMatrixList(MA0105.1 = toPWM(PFMatrixList[["MA0105.1"]]),
                         MA0105.3 = toPWM(PFMatrixList[["MA0105.3"]]), 
                         use.names = TRUE)
 
-grl.nfkbSites <- GRangesList(sapply(cdsTab[cdsTab$hgnc_symbol %in% c("B9D2(TGFB1)", "ZEB1"),]$chromosome_name, function(x){
+grl.nfkbSites <- GRangesList(sapply(seqlevels(gr.which), function(x){
   subject <- genome[[as(x, "character")]]
   sitesetList <- searchSeq(pwmList, subject, seqname = as(x, "character"), min.score = "95%", strand = "*") 
   gr.nfkbSites <- c(as(sitesetList[[1]], "GRanges"),
                    as(sitesetList[[2]], "GRanges"), 
                    as(sitesetList[[3]], "GRanges"))
   return(gr.nfkbSites)
-})
-)
+}))
 
 gr.nfkbSites <- unlist(grl.nfkbSites)
 gr.nfkbSites <- sort(gr.nfkbSites)
 gr.nfkbSites <- reduce(gr.nfkbSites)
-aT.nfkbSites <- AnnotationTrack(subsetByOverlaps(gr.nfkbSites, gr.which.cds.extd), name = "NFKB", col = "salmon")
+aT.nfkbSites <- AnnotationTrack(subsetByOverlaps(gr.nfkbSites, gr.which), name = "NFKB", col = "salmon")
 
 displayPars(aT.nfkbSites) <- list("fontcolor.title" = "black", "background.title" = "white", "col.axis" = "black", "col.frame" = "white")
 
@@ -97,49 +93,50 @@ biomTrack <- BiomartGeneRegionTrack(genome = "canFam3", chromosome = as(cdsTab[i
 displayPars(biomTrack) <- list(showFeatureId = TRUE, showId = TRUE, "fontcolor.title" = "black", "background.title" = "white", "col.axis" = "black", "col.frame" = "white")
 
 axisTrack <- GenomeAxisTrack()
-pushViewport(viewport(layout.pos.col = ncols, layout.pos.row = 1))
-plotTracks(main = paste("Coverage ", as(cdsTab[i,"marker"], "character"), " ", as(cdsTab[i,"hgnc_symbol"], "character"), " CDS", sep = ""), cex.main = 0.5,
-           list(axisTrack, 
-                biomTrack,
-                aT.primers,
-                aT.nfkbSites,
-                aT.ap1Sites,
-                aT.captureProbes,
-                dT.cov.input.wt.cds,
-                dT.cov.h2az.wt.cds,
-                dT.cov.input.tgfb.cds,
-                dT.cov.h2az.tgfb.cds
-           ), 
-           chromosome = cdsTab[i, "chromosome_name"], 
-           from = as(cdsTab[i, "start_position"], "integer"), 
-           to = as(cdsTab[i, "end_position"], "integer"), 
-           extend.left = 2500, 
-           extend.right = 2500,
-           add = TRUE, 
-           littleTicks = TRUE, 
-           scale = 0.5)
-popViewport(1)
-pushViewport(viewport(layout.pos.col = ncols, layout.pos.row = 2))
-plotTracks(main = paste("Coverage ", as(cdsTab[i,"marker"], "character"), " ", as(cdsTab[i,"hgnc_symbol"], "character"), " TSS1500", sep = ""), cex.main = 0.5,
-           list(axisTrack, 
-                biomTrack,
-                aT.primers,
-                aT.nfkbSites,
-                aT.ap1Sites,
-                dT.cov.input.wt.tss.cds,
-                dT.cov.h2az.wt.tss.cds,
-                dT.cov.input.tgfb.tss.cds,
-                dT.cov.h2az.tgfb.tss.cds
-           ), 
-           chromosome = cdsTab[i, "chromosome_name"], 
-           from = as(cdsTab[i, "promoter_start_position"], "integer"), 
-           to = as(cdsTab[i, "promoter_end_position"], "integer"), 
-           extend.left = 2500, 
-           extend.right = 2500,
-           add = TRUE, 
-           littleTicks = TRUE, 
-           scale = 0.5)
-popViewport(1)
 
-
-dev.off()
+# pushViewport(viewport(layout.pos.col = ncols, layout.pos.row = 1))
+# plotTracks(main = paste("Coverage ", as(cdsTab[i,"marker"], "character"), " ", as(cdsTab[i,"hgnc_symbol"], "character"), " CDS", sep = ""), cex.main = 0.5,
+#            list(axisTrack, 
+#                 biomTrack,
+#                 aT.primers,
+#                 aT.nfkbSites,
+#                 aT.ap1Sites,
+#                 aT.captureProbes,
+#                 dT.cov.input.wt.cds,
+#                 dT.cov.h2az.wt.cds,
+#                 dT.cov.input.tgfb.cds,
+#                 dT.cov.h2az.tgfb.cds
+#            ), 
+#            chromosome = cdsTab[i, "chromosome_name"], 
+#            from = as(cdsTab[i, "start_position"], "integer"), 
+#            to = as(cdsTab[i, "end_position"], "integer"), 
+#            extend.left = 2500, 
+#            extend.right = 2500,
+#            add = TRUE, 
+#            littleTicks = TRUE, 
+#            scale = 0.5)
+# popViewport(1)
+# pushViewport(viewport(layout.pos.col = ncols, layout.pos.row = 2))
+# plotTracks(main = paste("Coverage ", as(cdsTab[i,"marker"], "character"), " ", as(cdsTab[i,"hgnc_symbol"], "character"), " TSS1500", sep = ""), cex.main = 0.5,
+#            list(axisTrack, 
+#                 biomTrack,
+#                 aT.primers,
+#                 aT.nfkbSites,
+#                 aT.ap1Sites,
+#                 dT.cov.input.wt.tss.cds,
+#                 dT.cov.h2az.wt.tss.cds,
+#                 dT.cov.input.tgfb.tss.cds,
+#                 dT.cov.h2az.tgfb.tss.cds
+#            ), 
+#            chromosome = cdsTab[i, "chromosome_name"], 
+#            from = as(cdsTab[i, "promoter_start_position"], "integer"), 
+#            to = as(cdsTab[i, "promoter_end_position"], "integer"), 
+#            extend.left = 2500, 
+#            extend.right = 2500,
+#            add = TRUE, 
+#            littleTicks = TRUE, 
+#            scale = 0.5)
+# popViewport(1)
+# 
+# 
+# dev.off()
