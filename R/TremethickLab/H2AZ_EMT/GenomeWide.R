@@ -142,8 +142,8 @@ gr.epithelialMarkers.genes <-  GRanges(seqnames = epithelialMarkers.genes.tab$ch
                                         strand = c("-", "+")[match(epithelialMarkers.genes.tab$strand, c("-1", "1"))],
                                         epithelialMarkers.genes.tab[,c("ensembl_gene_id", "entrezgene", "hgnc_symbol", "marker")])
 
-hallmarksEMTMarkers <- getBM(attributes = c("ensembl_gene_id", "hgnc_symbol", "chromosome_name", "start_position",
-"end_position", "strand"), filters = "ensembl_gene_id", values = unique(MSigDB.TGFb_emt_gene_id.cfam$cfamiliaris_homolog_ensembl_gene), mart = dog)
+#hallmarksEMTMarkers <- getBM(attributes = c("ensembl_gene_id", "hgnc_symbol", "chromosome_name", "start_position",
+#"end_position", "strand"), filters = "ensembl_gene_id", values = unique(MSigDB.TGFb_emt_gene_id.cfam$cfamiliaris_homolog_ensembl_gene), mart = dog)
 
 
 #--------------add TGFb-------------------------------------------------------
@@ -184,7 +184,7 @@ files.h2az = c("H2AZ_TGFb_rep1_S3", "H2AZ_TGFb_rep2_S4", "H2AZ_WT_rep1_S1", "H2A
 
 # parameters for reading in BAM files
 # flag <- scanBamFlag(isProperPair = T, isPaired = T, isDuplicate = F, isSecondaryAlignment = F)
-flag <- scanBamFlag(isDuplicate = F, isPaired = T)
+flag <- scanBamFlag(isDuplicate = T, isPaired = T)
 SBParam.all <- ScanBamParam(flag = flag, simpleCigar = T, what = scanBamWhat()) #
 SBParam <- ScanBamParam(flag = flag, simpleCigar = T, what = scanBamWhat(), which = gr.which)
 
@@ -538,7 +538,8 @@ for (i in 1:length(gr.mesenchymalMarkers.genes.25kbTSS25kb)){
                                       end = as.integer(end(gr.mesenchymalMarkers.genes.25kbTSS25kb[i]), "integer"),
                                       name = mcols(gr.mesenchymalMarkers.genes.25kbTSS25kb[i])$hgnc_symbol,
                                       mart = dog)
-  displayPars(biomTrack) <- list("fontcolor.title" = "black", "background.title" = "white", "col.axis" = "black", "col.frame" = "white")
+  displayPars(biomTrack) <- list(showFeatureId = TRUE, showId = TRUE, "fontcolor.title" = "black", "background.title" = "white", "col.axis" = "black", "col.frame" = "white")
+  
   
   chromosome(dT.cov.input.emt_markers.wt) <- seqnames(gr.mesenchymalMarkers.genes.25kbTSS25kb)[i]
   chromosome(dT.cov.input.emt_markers.tgfb) <- seqnames(gr.mesenchymalMarkers.genes.25kbTSS25kb)[i]
@@ -555,12 +556,10 @@ for (i in 1:length(gr.mesenchymalMarkers.genes.25kbTSS25kb)){
   plotTracks(list(biomTrack, 
                   dT.cov.input.emt_markers.wt, 
                   dT.cov.h2az.emt_markers.wt,
-                  #dT.GSM1068566_CpG_context_MDCK_control,
                   atPeaks_WT,
                   atSummits_WT,
                   dT.cov.input.emt_markers.tgfb, 
                   dT.cov.h2az.emt_markers.tgfb,
-                  #dT.GSM1068567_CpG_context_MDCK_TGFB,
                   atPeaks_TGFb,
                   atSummits_TGFb,
                   dT.dmr
