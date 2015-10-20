@@ -8,7 +8,7 @@ library("GenomicAlignments")
 
 options(ucscChromosomeNames=FALSE)
 
-setwd('~/Data/Tremethick/EMT/')
+setwd('~/Data/Tremethick/EMT/GenomeWide')
 
 # define Ensembl IDs prior to lookup at Biomart:
 # # EMT markers
@@ -160,8 +160,8 @@ getBM(attributes = c("ensembl_gene_id",
       values = TGFb.Hsap$ensembl_gene_id, human)
 
 #-------------put together GRanges object for reading BAM files---------------
-gr.which <- c(promoters(reduce(gr.mesenchymalMarkers), upstream = 25000, downstream = 25000),
-              promoters(reduce(gr.epithelialMarkers), upstream = 25000, downstream = 25000))
+gr.which <- c(promoters(reduce(gr.mesenchymalMarkers), upstream = 400000, downstream = 400000),
+              promoters(reduce(gr.epithelialMarkers), upstream = 400000, downstream = 400000))
 # extending CDH1 region
 start(gr.which[10]) <- start(gr.which[10]) - 150000
 strand(gr.which) <- "*"
@@ -183,8 +183,8 @@ files.input = c("Input_TGFb_rep1_S7", "Input_TGFb_rep2_S8", "Input_WT_rep1_S5", 
 files.h2az = c("H2AZ_TGFb_rep1_S3", "H2AZ_TGFb_rep2_S4", "H2AZ_WT_rep1_S1", "H2AZ_WT_rep2_S2")
 
 # parameters for reading in BAM files
-# flag <- scanBamFlag(isProperPair = T, isPaired = T, isDuplicate = F, isSecondaryAlignment = F)
-flag <- scanBamFlag(isDuplicate = T, isPaired = T)
+flag <- scanBamFlag(isProperPair = T, isPaired = T, isDuplicate = F, isSecondaryAlignment = F)
+flag <- scanBamFlag(isDuplicate = NA, isPaired = T)
 SBParam.all <- ScanBamParam(flag = flag, simpleCigar = T, what = scanBamWhat()) #
 SBParam <- ScanBamParam(flag = flag, simpleCigar = T, what = scanBamWhat(), which = gr.which)
 
@@ -389,7 +389,7 @@ displayPars(dT.dmr) <- list("fontcolor.title" = "black", "background.title" = "w
 #-----------plotting coverage across epithelial markers------------------------------------------
 gr.epithelialMarkers.1500TSS1500 <- promoters(gr.epithelialMarkers, upstream = 1500, downstream = 1500)
 
-pdf("~/OneDrive/Documents/ANU/Tremethick Lab/Lab Meetings/Lab Meeting 2015-10-14/MDCK_ChIP-Seq_EpitheliaMarkers_coverage_plots_1500TSS1500_incl_DMRs.pdf")
+pdf("~/OneDrive/Documents/ANU/Tremethick Lab/Lab Meetings/Lab Meeting 2015-10-14/MDCK_ChIP-Seq_EpitheliaMarkers_coverage_plots_1500TSS1500_incl_DMRs_TFbindingSites.pdf")
 for (i in 1:length(gr.epithelialMarkers.1500TSS1500)){
   biomTrack <- BiomartGeneRegionTrack(genome = "canFam3", 
                                       chromosome = as(seqnames(gr.epithelialMarkers.1500TSS1500), "character")[i],
@@ -414,12 +414,14 @@ for (i in 1:length(gr.epithelialMarkers.1500TSS1500)){
   plotTracks(list(biomTrack,
                   dT.cov.input.emt_markers.wt, 
                   dT.cov.h2az.emt_markers.wt,
-                  atPeaks_WT,
-                  atSummits_WT,
+                  aT.ap1Sites,
+                  aT.nfkbSites,
+                  #atPeaks_WT,
+                  #atSummits_WT,
                   dT.cov.input.emt_markers.tgfb, 
                   dT.cov.h2az.emt_markers.tgfb,
-                  atPeaks_TGFb,
-                  atSummits_TGFb,
+                  #atPeaks_TGFb,
+                  #atSummits_TGFb,
                   dT.dmr),
              chromosome = as(seqnames(gr.epithelialMarkers.1500TSS1500), "character")[i],
              from = as.integer(start(gr.epithelialMarkers.1500TSS1500[i]), "integer"),
@@ -428,7 +430,7 @@ for (i in 1:length(gr.epithelialMarkers.1500TSS1500)){
              extend.left = 1000,
              main = paste(mcols(gr.epithelialMarkers.1500TSS1500[i])$hgnc_symbol, "transcript",  mcols(gr.epithelialMarkers.1500TSS1500[i])$ensembl_transcript_id, sep = " "),
              cex.main = 0.5,
-             sizes = c(0.05,0.1,0.1,0.01,0.01,0.1,0.1,0.01,0.01,0.1))
+             sizes = c(0.05, 0.2, 0.2, 0.05, 0.05, 0.2, 0.2, 0.05))
 }
 dev.off()
 
@@ -457,15 +459,17 @@ for (i in 1:length(gr.epithelialMarkers.genes.25kbTSS25kb)){
   displayPars(dT.cov.h2az.emt_markers.wt) <- list(ylim = c(0,max.y.tss))
   displayPars(dT.cov.h2az.emt_markers.tgfb) <- list(ylim = c(0,max.y.tss))
   
-  plotTracks(list(biomTrack, 
+  plotTracks(list(biomTrack,
                   dT.cov.input.emt_markers.wt, 
                   dT.cov.h2az.emt_markers.wt,
-                  atPeaks_WT,
-                  atSummits_WT,
+                  aT.ap1Sites,
+                  aT.nfkbSites,
+                  #atPeaks_WT,
+                  #atSummits_WT,
                   dT.cov.input.emt_markers.tgfb, 
                   dT.cov.h2az.emt_markers.tgfb,
-                  atPeaks_TGFb,
-                  atSummits_TGFb,
+                  #atPeaks_TGFb,
+                  #atSummits_TGFb,
                   dT.dmr),
              chromosome = as(seqnames(gr.epithelialMarkers.genes.25kbTSS25kb), "character")[i],
              from = as.integer(start(gr.epithelialMarkers.genes.25kbTSS25kb[i]), "integer"),
@@ -474,7 +478,7 @@ for (i in 1:length(gr.epithelialMarkers.genes.25kbTSS25kb)){
              extend.left = 1000,
              main = mcols(gr.epithelialMarkers.genes.25kbTSS25kb[i])$hgnc_symbol,
              cex.main = 0.5,
-             sizes = c(0.05,0.1,0.1,0.01,0.01,0.1,0.1,0.01,0.01,0.1))
+             sizes = c(0.05, 0.2, 0.2, 0.05, 0.05, 0.2, 0.2, 0.05))
 }
 dev.off()
 
@@ -508,12 +512,14 @@ for (i in 1:length(gr.mesenchymalMarkers.1500TSS1500)){
   plotTracks(list(biomTrack,
                   dT.cov.input.emt_markers.wt, 
                   dT.cov.h2az.emt_markers.wt,
-                  atPeaks_WT,
-                  atSummits_WT,
+                  aT.ap1Sites,
+                  aT.nfkbSites,
+                  #atPeaks_WT,
+                  #atSummits_WT,
                   dT.cov.input.emt_markers.tgfb, 
                   dT.cov.h2az.emt_markers.tgfb,
-                  atPeaks_TGFb,
-                  atSummits_TGFb,
+                  #atPeaks_TGFb,
+                  #atSummits_TGFb,
                   dT.dmr),
              chromosome = as(seqnames(gr.mesenchymalMarkers.1500TSS1500), "character")[i],
              from = as.integer(start(gr.mesenchymalMarkers.1500TSS1500[i]), "integer"),
@@ -522,7 +528,7 @@ for (i in 1:length(gr.mesenchymalMarkers.1500TSS1500)){
              extend.left = 1000,
              main = paste(mcols(gr.mesenchymalMarkers.1500TSS1500[i])$hgnc_symbol, "transcript",  mcols(gr.mesenchymalMarkers.1500TSS1500[i])$ensembl_transcript_id, sep = " "),
              cex.main = 0.5,
-             sizes = c(0.05,0.1,0.1,0.01,0.01,0.1,0.1,0.01,0.01,0.1))
+             sizes = c(0.05, 0.2, 0.2, 0.05, 0.05, 0.2, 0.2, 0.05))
 }
 dev.off()
 
@@ -553,15 +559,17 @@ for (i in 1:length(gr.mesenchymalMarkers.genes.25kbTSS25kb)){
   displayPars(dT.cov.h2az.emt_markers.tgfb) <- list(ylim = c(0,max.y.tss))
   
   
-  plotTracks(list(biomTrack, 
+  plotTracks(list(biomTrack,
                   dT.cov.input.emt_markers.wt, 
                   dT.cov.h2az.emt_markers.wt,
-                  atPeaks_WT,
-                  atSummits_WT,
+                  aT.ap1Sites,
+                  aT.nfkbSites,
+                  #atPeaks_WT,
+                  #atSummits_WT,
                   dT.cov.input.emt_markers.tgfb, 
                   dT.cov.h2az.emt_markers.tgfb,
-                  atPeaks_TGFb,
-                  atSummits_TGFb,
+                  #atPeaks_TGFb,
+                  #atSummits_TGFb,
                   dT.dmr
                 ),
              chromosome = as(seqnames(gr.mesenchymalMarkers.genes.25kbTSS25kb), "character")[i],
@@ -572,9 +580,29 @@ for (i in 1:length(gr.mesenchymalMarkers.genes.25kbTSS25kb)){
              main = mcols(gr.mesenchymalMarkers.genes.25kbTSS25kb[i])$hgnc_symbol,
              strand = "*",
              cex.main = 0.5,
-             sizes = c(0.05,0.1,0.1,0.01,0.01,0.1,0.1,0.01,0.01,0.1))
+             sizes = c(0.05, 0.2, 0.2, 0.05, 0.05, 0.2, 0.2, 0.05))
 }
 dev.off()
 
+# 
+# Input_TGFb_rep1 <- subsetByOverlaps(import("~/Data/Tremethick/EMT/GenomeWide/macs2_analysis/TGFb_rep1/NA_control_lambda.bw"), gr.which)
+# H2AZ_TGFb_rep1 <- subsetByOverlaps(import("~/Data/Tremethick/EMT/GenomeWide/macs2_analysis/TGFb_rep1/NA_treat_pileup.bw"), gr.which)
+# H2AZ_TGFb_rep1_FE <- subsetByOverlaps(import("~/Data/Tremethick/EMT/GenomeWide/macs2_analysis/TGFb_rep1/H2AZ_TGFb_rep1_FE.bw"), gr.which)
+# H2AZ_TGFb_rep1_logLR <- subsetByOverlaps(import("~/Data/Tremethick/EMT/GenomeWide/macs2_analysis/TGFb_rep1/H2AZ_TGFb_rep1_logLR.bw"), gr.which)
+# 
+# Input_TGFb_rep2 <- subsetByOverlaps(import("~/Data/Tremethick/EMT/GenomeWide/macs2_analysis/TGFb_rep2/NA_control_lambda.bw"), gr.which)
+# H2AZ_TGFb_rep2 <- subsetByOverlaps(import("~/Data/Tremethick/EMT/GenomeWide/macs2_analysis/TGFb_rep2/NA_treat_pileup.bw"), gr.which)
+# H2AZ_TGFb_rep2_FE <- subsetByOverlaps(import("~/Data/Tremethick/EMT/GenomeWide/macs2_analysis/TGFb_rep2/H2AZ_TGFb_rep2_FE.bw"), gr.which)
+# H2AZ_TGFb_rep2_logLR <- subsetByOverlaps(import("~/Data/Tremethick/EMT/GenomeWide/macs2_analysis/TGFb_rep2/H2AZ_TGFb_rep2_logLR.bw"), gr.which)
+# 
+# Input_WT_rep1 <- subsetByOverlaps(import("~/Data/Tremethick/EMT/GenomeWide/macs2_analysis/WT_rep1/NA_control_lambda.bw"), gr.which)
+# H2AZ_WT_rep1 <- subsetByOverlaps(import("~/Data/Tremethick/EMT/GenomeWide/macs2_analysis/WT_rep1/NA_treat_pileup.bw"), gr.which)
+# H2AZ_WT_rep1_FE <- subsetByOverlaps(import("~/Data/Tremethick/EMT/GenomeWide/macs2_analysis/WT_rep1/H2AZ_WT_rep1_FE.bw"), gr.which)
+# H2AZ_WT_rep1_logLR <- subsetByOverlaps(import("~/Data/Tremethick/EMT/GenomeWide/macs2_analysis/WT_rep1/H2AZ_WT_rep1_logLR.bw"), gr.which)
+# 
+# Input_WT_rep2 <- subsetByOverlaps(import("~/Data/Tremethick/EMT/GenomeWide/macs2_analysis/WT_rep2/NA_control_lambda.bw"), gr.which)
+# H2AZ_WT_rep2 <- subsetByOverlaps(import("~/Data/Tremethick/EMT/GenomeWide/macs2_analysis/WT_rep2/NA_treat_pileup.bw"), gr.which)
+# H2AZ_WT_rep2_FE <- subsetByOverlaps(import("~/Data/Tremethick/EMT/GenomeWide/macs2_analysis/WT_rep2/H2AZ_WT_rep2_FE.bw"), gr.which)
+# H2AZ_WT_rep2_logLR <- subsetByOverlaps(import("~/Data/Tremethick/EMT/GenomeWide/macs2_analysis/WT_rep2/H2AZ_WT_rep2_logLR.bw"), gr.which)
 
 
