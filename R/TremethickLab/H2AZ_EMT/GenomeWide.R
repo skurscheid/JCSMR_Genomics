@@ -8,7 +8,7 @@ library("GenomicAlignments")
 
 options(ucscChromosomeNames=FALSE)
 
-setwd('~/Data/Tremethick/EMT/GenomeWide')
+setwd('~/Data/Tremethick/EMT/')
 
 # define Ensembl IDs prior to lookup at Biomart:
 # # EMT markers
@@ -295,8 +295,6 @@ displayPars(dT.cov.input.emt_markers.tgfb) <- list("fontcolor.title" = "black", 
 displayPars(dT.cov.h2az.emt_markers.wt) <- list("fontcolor.title" = "black", "background.title" = "white", "col.axis" = "black", "col.frame" = "white", "cex.title" = 0.5)
 displayPars(dT.cov.h2az.emt_markers.tgfb) <- list("fontcolor.title" = "black", "background.title" = "white", "col.axis" = "black", "col.frame" = "white", "cex.title" = 0.5)
 
-
-
 save(file = "genomeWide.50kbTSS.DataTracks.rda", list = c("dT.cov.input.emt_markers.wt", "dT.cov.input.emt_markers.tgfb", "dT.cov.h2az.emt_markers.wt", "dT.cov.h2az.emt_markers.tgfb"))
 
 #-------------loading MACS2 peak calling results----------------------
@@ -381,7 +379,7 @@ displayPars(dT.methylation) <- list("fontcolor.title" = "black", "background.tit
 # perhaps better to use the published Differentially Methylated Regions [Carmona et al 2014]
 mdck_dmr <- read.csv("MDCK_WGBS_Carmona_et_al_2014/suppTable2.csv", strip.white = TRUE)
 colnames(mdck_dmr) <- c("chrom", "start", "end", "gene_symbol", "ENSEMBL_transcript_id", "No_of_CpG_sites", "average_DNA_methylation_difference")
-mdck_dmr$chrom <- paste("chr", mdck_dmr$chrom, sep = "")
+#mdck_dmr$chrom <- paste("chr", mdck_dmr$chrom, sep = "")
 gr.mdck_dmr <- GRanges(mdck_dmr$chrom, IRanges(mdck_dmr$start, mdck_dmr$end), strand = "*", mdck_dmr[, c("gene_symbol", "ENSEMBL_transcript_id", "No_of_CpG_sites", "average_DNA_methylation_difference")])
 dT.dmr <- DataTrack(gr.mdck_dmr, type = "histogram", name = "MDCK DMRs", data = mcols(gr.mdck_dmr)$average_DNA_methylation_difference)
 displayPars(dT.dmr) <- list("fontcolor.title" = "black", "background.title" = "white", "col.axis" = "black", "col.frame" = "white")
@@ -389,7 +387,7 @@ displayPars(dT.dmr) <- list("fontcolor.title" = "black", "background.title" = "w
 #-----------plotting coverage across epithelial markers------------------------------------------
 gr.epithelialMarkers.1500TSS1500 <- promoters(gr.epithelialMarkers, upstream = 1500, downstream = 1500)
 
-pdf("~/OneDrive/Documents/ANU/Tremethick Lab/Lab Meetings/Lab Meeting 2015-10-14/MDCK_ChIP-Seq_EpitheliaMarkers_coverage_plots_1500TSS1500_incl_DMRs_TFbindingSites.pdf")
+pdf("~/OneDrive/Documents/ANU/Tremethick Lab/Lab Meetings/Lab Meeting 2015-10-14/MDCK_ChIP-Seq_EpitheliaMarkers_coverage_plots_1500TSS1500_incl_DMRs_incl_SureSelect.pdf")
 for (i in 1:length(gr.epithelialMarkers.1500TSS1500)){
   biomTrack <- BiomartGeneRegionTrack(genome = "canFam3", 
                                       chromosome = as(seqnames(gr.epithelialMarkers.1500TSS1500), "character")[i],
@@ -398,6 +396,22 @@ for (i in 1:length(gr.epithelialMarkers.1500TSS1500)){
                                       name = paste(mcols(gr.epithelialMarkers.1500TSS1500[i])$hgnc_symbol, "transcript",  mcols(gr.epithelialMarkers.1500TSS1500[i])$ensembl_transcript_id, sep = " "),
                                       mart = dog)
   displayPars(biomTrack) <- list("fontcolor.title" = "black", "background.title" = "white", "col.axis" = "black", "col.frame" = "white")
+  
+  # Data from SureSelect capture
+  chromosome(dT.cov.input.wt) <- seqnames(gr.epithelialMarkers.1500TSS1500)[i]
+  chromosome(dT.cov.input.tgfb) <- seqnames(gr.epithelialMarkers.1500TSS1500)[i]
+  chromosome(dT.cov.h2az.wt) <- seqnames(gr.epithelialMarkers.1500TSS1500)[i]
+  chromosome(dT.cov.h2az.tgfb) <- seqnames(gr.epithelialMarkers.1500TSS1500)[i]
+  
+  chromosome(aT.primers) <- seqnames(gr.epithelialMarkers.1500TSS1500)[i]
+  
+  max.y <- max(max(values(dT.cov.input.wt)), max(values(dT.cov.input.tgfb)), max(values(dT.cov.h2az.wt)), max(values(dT.cov.h2az.tgfb)))
+  displayPars(dT.cov.input.wt) <- list(ylim = c(0,max.y))
+  displayPars(dT.cov.input.tgfb) <- list(ylim = c(0,max.y))
+  displayPars(dT.cov.h2az.wt) <- list(ylim = c(0,max.y))
+  displayPars(dT.cov.h2az.tgfb) <- list(ylim = c(0,max.y))
+  
+  # Data from whole genome ChIP-Seq
   
   chromosome(dT.cov.input.emt_markers.wt) <- seqnames(gr.epithelialMarkers.1500TSS1500)[i]
   chromosome(dT.cov.input.emt_markers.tgfb) <- seqnames(gr.epithelialMarkers.1500TSS1500)[i]
@@ -410,34 +424,39 @@ for (i in 1:length(gr.epithelialMarkers.1500TSS1500)){
   displayPars(dT.cov.h2az.emt_markers.wt) <- list(ylim = c(0,max.y.tss))
   displayPars(dT.cov.h2az.emt_markers.tgfb) <- list(ylim = c(0,max.y.tss))
   
-  
-  plotTracks(list(biomTrack,
-                  dT.cov.input.emt_markers.wt, 
-                  dT.cov.h2az.emt_markers.wt,
+  plotTracks(list(axisTrack,
+                  biomTrack,
                   aT.ap1Sites,
                   aT.nfkbSites,
-                  #atPeaks_WT,
-                  #atSummits_WT,
+                  aT.primers,
+                  dT.cov.input.emt_markers.wt, 
+                  dT.cov.h2az.emt_markers.wt,
+                  dT.cov.input.wt,
+                  dT.cov.h2az.wt,
                   dT.cov.input.emt_markers.tgfb, 
                   dT.cov.h2az.emt_markers.tgfb,
-                  #atPeaks_TGFb,
-                  #atSummits_TGFb,
-                  dT.dmr),
-             chromosome = as(seqnames(gr.epithelialMarkers.1500TSS1500), "character")[i],
-             from = as.integer(start(gr.epithelialMarkers.1500TSS1500[i]), "integer"),
-             to = as.integer(end(gr.epithelialMarkers.1500TSS1500[i]), "integer"),
-             extend.right = 1000,
-             extend.left = 1000,
-             main = paste(mcols(gr.epithelialMarkers.1500TSS1500[i])$hgnc_symbol, "transcript",  mcols(gr.epithelialMarkers.1500TSS1500[i])$ensembl_transcript_id, sep = " "),
-             cex.main = 0.5,
-             sizes = c(0.05, 0.2, 0.2, 0.05, 0.05, 0.2, 0.2, 0.05))
+                  dT.cov.input.tgfb,
+                  dT.cov.h2az.tgfb,
+                  dT.dmr
+  ),
+  chromosome = as(seqnames(gr.epithelialMarkers.1500TSS1500), "character")[i],
+  from = as.integer(start(gr.epithelialMarkers.1500TSS1500[i]), "integer"),
+  to = as.integer(end(gr.epithelialMarkers.1500TSS1500[i]), "integer"),
+  extend.right = 1000,
+  extend.left = 1000,
+  main = mcols(gr.epithelialMarkers.1500TSS1500[i])$hgnc_symbol,
+  strand = "*",
+  cex.main = 0.5,
+  sizes = c(0.01, 0.04, 0.02, 0.02, 0.01, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.05),
+  scale = 0.5)
+
 }
 dev.off()
 
 # whole 50kb region
 gr.epithelialMarkers.genes.25kbTSS25kb <- promoters(gr.epithelialMarkers.genes, upstream = 20000, downstream = 20000)
 
-pdf("~/OneDrive/Documents/ANU/Tremethick Lab/Lab Meetings/Lab Meeting 2015-10-14/MDCK_ChIP-Seq_EpitheliaMarkers_coverage_plots_20kbTSS20kb_incl_DMRs.pdf", height = 10, width = 15)
+pdf("~/OneDrive/Documents/ANU/Tremethick Lab/Lab Meetings/Lab Meeting 2015-10-14/MDCK_ChIP-Seq_EpitheliaMarkers_coverage_plots_20kbTSS20kb_incl_DMRs_incl_SureSelect.pdf", height = 10, width = 15)
 for (i in 1:length(gr.epithelialMarkers.genes.25kbTSS25kb)){
   biomTrack <- BiomartGeneRegionTrack(genome = "canFam3", 
                                       chromosome = as(seqnames(gr.epithelialMarkers.genes.25kbTSS25kb), "character")[i],
@@ -448,6 +467,21 @@ for (i in 1:length(gr.epithelialMarkers.genes.25kbTSS25kb)){
                                       )
   displayPars(biomTrack) <- list("fontcolor.title" = "black", "background.title" = "white", "col.axis" = "black", "col.frame" = "white")
   
+  # Data from SureSelect capture
+  chromosome(dT.cov.input.wt) <- seqnames(gr.epithelialMarkers.genes.25kbTSS25kb)[i]
+  chromosome(dT.cov.input.tgfb) <- seqnames(gr.epithelialMarkers.genes.25kbTSS25kb)[i]
+  chromosome(dT.cov.h2az.wt) <- seqnames(gr.epithelialMarkers.genes.25kbTSS25kb)[i]
+  chromosome(dT.cov.h2az.tgfb) <- seqnames(gr.epithelialMarkers.genes.25kbTSS25kb)[i]
+  
+  chromosome(aT.primers) <- seqnames(gr.epithelialMarkers.genes.25kbTSS25kb)[i]
+  
+  max.y <- max(max(values(dT.cov.input.wt)), max(values(dT.cov.input.tgfb)), max(values(dT.cov.h2az.wt)), max(values(dT.cov.h2az.tgfb)))
+  displayPars(dT.cov.input.wt) <- list(ylim = c(0,max.y))
+  displayPars(dT.cov.input.tgfb) <- list(ylim = c(0,max.y))
+  displayPars(dT.cov.h2az.wt) <- list(ylim = c(0,max.y))
+  displayPars(dT.cov.h2az.tgfb) <- list(ylim = c(0,max.y))
+  
+  # Data from whole genome ChIP-Seq
   chromosome(dT.cov.input.emt_markers.wt) <- seqnames(gr.epithelialMarkers.genes.25kbTSS25kb)[i]
   chromosome(dT.cov.input.emt_markers.tgfb) <- seqnames(gr.epithelialMarkers.genes.25kbTSS25kb)[i]
   chromosome(dT.cov.h2az.emt_markers.wt) <- seqnames(gr.epithelialMarkers.genes.25kbTSS25kb)[i]
@@ -459,26 +493,32 @@ for (i in 1:length(gr.epithelialMarkers.genes.25kbTSS25kb)){
   displayPars(dT.cov.h2az.emt_markers.wt) <- list(ylim = c(0,max.y.tss))
   displayPars(dT.cov.h2az.emt_markers.tgfb) <- list(ylim = c(0,max.y.tss))
   
-  plotTracks(list(biomTrack,
-                  dT.cov.input.emt_markers.wt, 
-                  dT.cov.h2az.emt_markers.wt,
+  plotTracks(list(axisTrack,
+                  biomTrack,
                   aT.ap1Sites,
                   aT.nfkbSites,
-                  #atPeaks_WT,
-                  #atSummits_WT,
+                  aT.primers,
+                  dT.cov.input.emt_markers.wt, 
+                  dT.cov.h2az.emt_markers.wt,
+                  dT.cov.input.wt,
+                  dT.cov.h2az.wt,
                   dT.cov.input.emt_markers.tgfb, 
                   dT.cov.h2az.emt_markers.tgfb,
-                  #atPeaks_TGFb,
-                  #atSummits_TGFb,
-                  dT.dmr),
-             chromosome = as(seqnames(gr.epithelialMarkers.genes.25kbTSS25kb), "character")[i],
-             from = as.integer(start(gr.epithelialMarkers.genes.25kbTSS25kb[i]), "integer"),
-             to = as.integer(end(gr.epithelialMarkers.genes.25kbTSS25kb[i]), "integer"),
-             extend.right = 1000,
-             extend.left = 1000,
-             main = mcols(gr.epithelialMarkers.genes.25kbTSS25kb[i])$hgnc_symbol,
-             cex.main = 0.5,
-             sizes = c(0.05, 0.2, 0.2, 0.05, 0.05, 0.2, 0.2, 0.05))
+                  dT.cov.input.tgfb,
+                  dT.cov.h2az.tgfb,
+                  dT.dmr
+  ),
+  chromosome = as(seqnames(gr.epithelialMarkers.genes.25kbTSS25kb), "character")[i],
+  from = as.integer(start(gr.epithelialMarkers.genes.25kbTSS25kb[i]), "integer"),
+  to = as.integer(end(gr.epithelialMarkers.genes.25kbTSS25kb[i]), "integer"),
+  extend.right = 1000,
+  extend.left = 1000,
+  main = mcols(gr.epithelialMarkers.genes.25kbTSS25kb[i])$hgnc_symbol,
+  strand = "*",
+  cex.main = 0.5,
+  sizes = c(0.01, 0.04, 0.02, 0.02, 0.01, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.05),
+  scale = 0.5)
+
 }
 dev.off()
 
@@ -486,7 +526,7 @@ dev.off()
 # mesenchymal markers
 gr.mesenchymalMarkers.1500TSS1500 <- promoters(gr.mesenchymalMarkers, upstream = 1500, downstream = 1500)
 
-pdf("~/OneDrive/Documents/ANU/Tremethick Lab/Lab Meetings/Lab Meeting 2015-10-14/MDCK_ChIP-Seq_MesenchymalMarkers_coverage_plots_1500TSS1500_incl_DMRs.pdf")
+pdf("~/OneDrive/Documents/ANU/Tremethick Lab/Lab Meetings/Lab Meeting 2015-10-14/MDCK_ChIP-Seq_MesenchymalMarkers_coverage_plots_1500TSS1500_incl_DMRs_incl_SureSelect.pdf")
 for (i in 1:length(gr.mesenchymalMarkers.1500TSS1500)){
   biomTrack <- BiomartGeneRegionTrack(genome = "canFam3", 
                                       chromosome = as(seqnames(gr.mesenchymalMarkers.1500TSS1500), "character")[i],
@@ -496,6 +536,20 @@ for (i in 1:length(gr.mesenchymalMarkers.1500TSS1500)){
                                       mart = dog)
   
   displayPars(biomTrack) <- list("fontcolor.title" = "black", "background.title" = "white", "col.axis" = "black", "col.frame" = "white")
+  
+  # Data from SureSelect capture
+  chromosome(dT.cov.input.wt) <- seqnames(gr.mesenchymalMarkers.1500TSS1500)[i]
+  chromosome(dT.cov.input.tgfb) <- seqnames(gr.mesenchymalMarkers.1500TSS1500)[i]
+  chromosome(dT.cov.h2az.wt) <- seqnames(gr.mesenchymalMarkers.1500TSS1500)[i]
+  chromosome(dT.cov.h2az.tgfb) <- seqnames(gr.mesenchymalMarkers.1500TSS1500)[i]
+  
+  chromosome(aT.primers) <- seqnames(gr.mesenchymalMarkers.1500TSS1500)[i]
+  
+  max.y <- max(max(values(dT.cov.input.wt)), max(values(dT.cov.input.tgfb)), max(values(dT.cov.h2az.wt)), max(values(dT.cov.h2az.tgfb)))
+  displayPars(dT.cov.input.wt) <- list(ylim = c(0,max.y))
+  displayPars(dT.cov.input.tgfb) <- list(ylim = c(0,max.y))
+  displayPars(dT.cov.h2az.wt) <- list(ylim = c(0,max.y))
+  displayPars(dT.cov.h2az.tgfb) <- list(ylim = c(0,max.y))
   
   chromosome(dT.cov.input.emt_markers.wt) <- seqnames(gr.mesenchymalMarkers.1500TSS1500)[i]
   chromosome(dT.cov.input.emt_markers.tgfb) <- seqnames(gr.mesenchymalMarkers.1500TSS1500)[i]
@@ -509,26 +563,32 @@ for (i in 1:length(gr.mesenchymalMarkers.1500TSS1500)){
   displayPars(dT.cov.h2az.emt_markers.tgfb) <- list(ylim = c(0,max.y.tss))
   
   
-  plotTracks(list(biomTrack,
-                  dT.cov.input.emt_markers.wt, 
-                  dT.cov.h2az.emt_markers.wt,
+  plotTracks(list(axisTrack,
+                  biomTrack,
                   aT.ap1Sites,
                   aT.nfkbSites,
-                  #atPeaks_WT,
-                  #atSummits_WT,
+                  aT.primers,
+                  dT.cov.input.emt_markers.wt, 
+                  dT.cov.h2az.emt_markers.wt,
+                  dT.cov.input.wt,
+                  dT.cov.h2az.wt,
                   dT.cov.input.emt_markers.tgfb, 
                   dT.cov.h2az.emt_markers.tgfb,
-                  #atPeaks_TGFb,
-                  #atSummits_TGFb,
-                  dT.dmr),
-             chromosome = as(seqnames(gr.mesenchymalMarkers.1500TSS1500), "character")[i],
-             from = as.integer(start(gr.mesenchymalMarkers.1500TSS1500[i]), "integer"),
-             to = as.integer(end(gr.mesenchymalMarkers.1500TSS1500[i]), "integer"),
-             extend.right = 1000,
-             extend.left = 1000,
-             main = paste(mcols(gr.mesenchymalMarkers.1500TSS1500[i])$hgnc_symbol, "transcript",  mcols(gr.mesenchymalMarkers.1500TSS1500[i])$ensembl_transcript_id, sep = " "),
-             cex.main = 0.5,
-             sizes = c(0.05, 0.2, 0.2, 0.05, 0.05, 0.2, 0.2, 0.05))
+                  dT.cov.input.tgfb,
+                  dT.cov.h2az.tgfb,
+                  dT.dmr
+  ),
+  chromosome = as(seqnames(gr.mesenchymalMarkers.1500TSS1500), "character")[i],
+  from = as.integer(start(gr.mesenchymalMarkers.1500TSS1500[i]), "integer"),
+  to = as.integer(end(gr.mesenchymalMarkers.1500TSS1500[i]), "integer"),
+  extend.right = 1000,
+  extend.left = 1000,
+  main = mcols(gr.mesenchymalMarkers.1500TSS1500[i])$hgnc_symbol,
+  strand = "*",
+  cex.main = 0.5,
+  sizes = c(0.01, 0.04, 0.02, 0.02, 0.01, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.05),
+  scale = 0.5)
+ 
 }
 dev.off()
 
@@ -536,7 +596,7 @@ dev.off()
 # whole 50kb region
 gr.mesenchymalMarkers.genes.25kbTSS25kb <- promoters(gr.mesenchymalMarkers.genes, upstream = 20000, downstream = 20000)
 
-pdf("~/OneDrive/Documents/ANU/Tremethick Lab/Lab Meetings/Lab Meeting 2015-10-14/MDCK_ChIP-Seq_MesenchymalMarkers_coverage_plots_20kbTSS20kb_incl_DMRs.pdf", height = 10, width = 15)
+pdf("~/OneDrive/Documents/ANU/Tremethick Lab/Lab Meetings/Lab Meeting 2015-10-14/MDCK_ChIP-Seq_MesenchymalMarkers_coverage_plots_20kbTSS20kb_incl_DMRs_incl_SureSelect.pdf", height = 10, width = 15)
 for (i in 1:length(gr.mesenchymalMarkers.genes.25kbTSS25kb)){
   biomTrack <- BiomartGeneRegionTrack(genome = "canFam3", 
                                       chromosome = as(seqnames(gr.mesenchymalMarkers.genes.25kbTSS25kb), "character")[i],
@@ -546,6 +606,19 @@ for (i in 1:length(gr.mesenchymalMarkers.genes.25kbTSS25kb)){
                                       mart = dog)
   displayPars(biomTrack) <- list(showFeatureId = TRUE, showId = TRUE, "fontcolor.title" = "black", "background.title" = "white", "col.axis" = "black", "col.frame" = "white")
   
+  # Data from SureSelect capture
+  chromosome(dT.cov.input.wt) <- seqnames(gr.mesenchymalMarkers.genes.25kbTSS25kb)[i]
+  chromosome(dT.cov.input.tgfb) <- seqnames(gr.mesenchymalMarkers.genes.25kbTSS25kb)[i]
+  chromosome(dT.cov.h2az.wt) <- seqnames(gr.mesenchymalMarkers.genes.25kbTSS25kb)[i]
+  chromosome(dT.cov.h2az.tgfb) <- seqnames(gr.mesenchymalMarkers.genes.25kbTSS25kb)[i]
+  
+  chromosome(aT.primers) <- seqnames(gr.mesenchymalMarkers.genes.25kbTSS25kb)[i]
+  
+  max.y <- max(max(values(dT.cov.input.wt)), max(values(dT.cov.input.tgfb)), max(values(dT.cov.h2az.wt)), max(values(dT.cov.h2az.tgfb)))
+  displayPars(dT.cov.input.wt) <- list(ylim = c(0,max.y))
+  displayPars(dT.cov.input.tgfb) <- list(ylim = c(0,max.y))
+  displayPars(dT.cov.h2az.wt) <- list(ylim = c(0,max.y))
+  displayPars(dT.cov.h2az.tgfb) <- list(ylim = c(0,max.y))
   
   chromosome(dT.cov.input.emt_markers.wt) <- seqnames(gr.mesenchymalMarkers.genes.25kbTSS25kb)[i]
   chromosome(dT.cov.input.emt_markers.tgfb) <- seqnames(gr.mesenchymalMarkers.genes.25kbTSS25kb)[i]
@@ -557,19 +630,20 @@ for (i in 1:length(gr.mesenchymalMarkers.genes.25kbTSS25kb)){
   displayPars(dT.cov.input.emt_markers.tgfb) <- list(ylim = c(0,max.y.tss))
   displayPars(dT.cov.h2az.emt_markers.wt) <- list(ylim = c(0,max.y.tss))
   displayPars(dT.cov.h2az.emt_markers.tgfb) <- list(ylim = c(0,max.y.tss))
-  
-  
-  plotTracks(list(biomTrack,
-                  dT.cov.input.emt_markers.wt, 
-                  dT.cov.h2az.emt_markers.wt,
+
+  plotTracks(list(axisTrack,
+                  biomTrack,
                   aT.ap1Sites,
                   aT.nfkbSites,
-                  #atPeaks_WT,
-                  #atSummits_WT,
+                  aT.primers,
+                  dT.cov.input.emt_markers.wt, 
+                  dT.cov.h2az.emt_markers.wt,
+                  dT.cov.input.wt,
+                  dT.cov.h2az.wt,
                   dT.cov.input.emt_markers.tgfb, 
                   dT.cov.h2az.emt_markers.tgfb,
-                  #atPeaks_TGFb,
-                  #atSummits_TGFb,
+                  dT.cov.input.tgfb,
+                  dT.cov.h2az.tgfb,
                   dT.dmr
                 ),
              chromosome = as(seqnames(gr.mesenchymalMarkers.genes.25kbTSS25kb), "character")[i],
@@ -580,7 +654,8 @@ for (i in 1:length(gr.mesenchymalMarkers.genes.25kbTSS25kb)){
              main = mcols(gr.mesenchymalMarkers.genes.25kbTSS25kb[i])$hgnc_symbol,
              strand = "*",
              cex.main = 0.5,
-             sizes = c(0.05, 0.2, 0.2, 0.05, 0.05, 0.2, 0.2, 0.05))
+             sizes = c(0.01, 0.04, 0.02, 0.02, 0.01, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.05),
+             scale = 0.5)
 }
 dev.off()
 
@@ -604,5 +679,22 @@ dev.off()
 # H2AZ_WT_rep2 <- subsetByOverlaps(import("~/Data/Tremethick/EMT/GenomeWide/macs2_analysis/WT_rep2/NA_treat_pileup.bw"), gr.which)
 # H2AZ_WT_rep2_FE <- subsetByOverlaps(import("~/Data/Tremethick/EMT/GenomeWide/macs2_analysis/WT_rep2/H2AZ_WT_rep2_FE.bw"), gr.which)
 # H2AZ_WT_rep2_logLR <- subsetByOverlaps(import("~/Data/Tremethick/EMT/GenomeWide/macs2_analysis/WT_rep2/H2AZ_WT_rep2_logLR.bw"), gr.which)
-
+plotTracks(list(biomTrack,
+                aT.ap1Sites,
+                aT.nfkbSites,
+                dT.cov.input.emt_markers.wt
+#                 dT.cov.h2az.emt_markers.wt,
+#                 dT.cov.input.wt,
+#                 dT.cov.h2az.wt,
+#                 dT.cov.input.emt_markers.tgfb, 
+#                 dT.cov.h2az.emt_markers.tgfb,
+#                 dT.cov.input.tgfb,
+#                 dT.cov.h2az.tgfb,
+#                 dT.dmr
+),
+chromosome = as(seqnames(gr.mesenchymalMarkers.genes.25kbTSS25kb), "character")[i],
+from = as.integer(start(gr.mesenchymalMarkers.genes.25kbTSS25kb[i]), "integer"),
+to = as.integer(end(gr.mesenchymalMarkers.genes.25kbTSS25kb[i]), "integer"),
+extend.right = 1000,
+extend.left = 1000)
 

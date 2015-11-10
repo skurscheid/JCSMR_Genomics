@@ -43,4 +43,50 @@ gr.MSigDB.TGFb_emt_gene_id.cfam <- GRanges(MSigDB.TGFb_emt_gene_id.cfam$chromoso
                                            strand = c("-", "+")[match(MSigDB.TGFb_emt_gene_id.cfam$strand, c("-1", "1"))],
                                            MSigDB.TGFb_emt_gene_id.cfam[, c("ensembl_gene_id", "entrezgene", "hgnc_symbol", "set")])
 
-gr.MSigDB.TGFb_emt_gene_id.cfam.tss <- promoters(gr.MSigDB.TGFb_emt_gene_id.cfam, upstream = 1500, downstream = 1500)
+gr.MSigDB.TGFb_emt_gene_id.cfam.tss <- promoters(gr.MSigDB.TGFb_emt_gene_id.cfam, upstream = 1, downstream = 0)
+gr.MSigDB.TGFb_emt_gene_id.cfam.tss1500 <- promoters(gr.MSigDB.TGFb_emt_gene_id.cfam, upstream = 1500, downstream = 1500)
+
+# TGFb-induced EMT
+MSigDB.TGFb_induced_EMT <- unlist(strsplit(sapply(child[c(4242)], function(x) xmlGetAttr(x, name = "MEMBERS_EZID")), ","))
+MSigDB.TGFb_induced_EMT.cfam <- getBM(attributes = c("ensembl_gene_id", "cfamiliaris_homolog_ensembl_gene"), filters = "entrezgene", values = as(MSigDB.TGFb_induced_EMT, "character"), mart = human)
+MSigDB.TGFb_induced_EMT.cfam <- getBM(attributes = c("ensembl_gene_id",
+                                                     "entrezgene",
+                                                     "chromosome_name",
+                                                     "start_position",
+                                                     "end_position",
+                                                     "hgnc_symbol",
+                                                     "strand"), 
+                                      filters = "ensembl_gene_id", 
+                                      values = unique(as(MSigDB.TGFb_induced_EMT.cfam$cfamiliaris_homolog_ensembl_gene, "character")), mart = dog)
+MSigDB.TGFb_induced_EMT.cfam$set <- "TGFb_induced_EMT"
+gr.MSigDB.TGFb_induced_EMT.cfam <- GRanges(MSigDB.TGFb_induced_EMT.cfam$chromosome_name, 
+                                           IRanges(MSigDB.TGFb_induced_EMT.cfam$start_position, MSigDB.TGFb_induced_EMT.cfam$end_position), 
+                                           strand = c("-", "+")[match(MSigDB.TGFb_induced_EMT.cfam$strand, c("-1", "1"))],
+                                           MSigDB.TGFb_induced_EMT.cfam[, c("ensembl_gene_id", "entrezgene", "hgnc_symbol", "set")])
+
+gr.MSigDB.TGFb_induced_EMT.cfam.tss <- promoters(gr.MSigDB.TGFb_induced_EMT.cfam, upstream = 1, downstream = 0)
+gr.MSigDB.TGFb_induced_EMT.cfam.tss1500 <- promoters(gr.MSigDB.TGFb_induced_EMT.cfam, upstream = 1500, downstream = 1500)
+
+# General EMT-associated genes
+MSigDB.EMT_associated <- unlist(strsplit(sapply(child[c(4242, 505, 7217, 7218)], function(x) xmlGetAttr(x, name = "MEMBERS_EZID")), ","))
+MSigDB.EMT_associated <- unique(MSigDB.EMT_associated)
+MSigDB.EMT_associated.cfam <- getBM(attributes = c("ensembl_gene_id", "cfamiliaris_homolog_ensembl_gene"), filters = "entrezgene", values = as(MSigDB.EMT_associated, "character"), mart = human)
+MSigDB.EMT_associated.cfam <- getBM(attributes = c("ensembl_gene_id",
+                                                     "entrezgene",
+                                                     "chromosome_name",
+                                                     "start_position",
+                                                     "end_position",
+                                                     "hgnc_symbol",
+                                                     "strand"), 
+                                      filters = "ensembl_gene_id", 
+                                      values = unique(as(MSigDB.EMT_associated.cfam$cfamiliaris_homolog_ensembl_gene, "character")), mart = dog)
+MSigDB.EMT_associated.cfam$set <- "TGFb_induced_EMT"
+gr.MSigDB.EMT_associated.cfam <- GRanges(MSigDB.EMT_associated.cfam$chromosome_name, 
+                                           IRanges(MSigDB.EMT_associated.cfam$start_position, MSigDB.EMT_associated.cfam$end_position), 
+                                           strand = c("-", "+")[match(MSigDB.EMT_associated.cfam$strand, c("-1", "1"))],
+                                           MSigDB.EMT_associated.cfam[, c("ensembl_gene_id", "entrezgene", "hgnc_symbol", "set")])
+
+gr.MSigDB.EMT_associated.cfam.tss <- promoters(gr.MSigDB.EMT_associated.cfam, upstream = 1, downstream = 0)
+gr.MSigDB.EMT_associated.cfam.tss1500 <- promoters(gr.MSigDB.EMT_associated.cfam, upstream = 1500, downstream = 1500)
+
+

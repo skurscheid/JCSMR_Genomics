@@ -128,6 +128,7 @@ gr.which <- GRanges(seqnames = designTab$chromosome_name,
 #----------load ChIP-qPCR amplicon data----------------------------------------
 primers <- read.xls("../ChIP-Primers.xlsx")
 gr.primers <- GRanges(seqnames = primers$Amplicon.location...Chr, IRanges(start = primers$Amplicon.location...Start, end = primers$Amplicon.location...Start), strand = "*", primerID = primers$Primer)
+seqlevels(gr.primers, force = T) <- gsub("chr", "", seqlevels(gr.primers))
 aT.primers <- AnnotationTrack(gr.primers, name = "ChIP-qPCR amplicons", col = "darkgrey")
 
 #----------load annotation of capture probes-----------------------------------
