@@ -26,8 +26,10 @@ setwd('~/Data/Tremethick/EMT/')
 # EPCAM -> ENSCAFG00000002653
 
 #----------connect to Ensembl biomaRt for annotation data----------------------
-dog <- useMart("ensembl", dataset = "cfamiliaris_gene_ensembl")
-human <- useMart("ensembl", dataset = "hsapiens_gene_ensembl")
+ensembl <- useEnsembl(biomart = "ensembl", host = "asia.ensembl.org")
+dog <- useEnsembl(biomart = "ensembl", dataset = "cfamiliaris_gene_ensembl", host = "asia.ensembl.org")
+human <- useEnsembl(biomart = "ensembl", dataset = "hsapiens_gene_ensembl", host = "asia.ensembl.org")
+
 filters <- listFilters(dog)
 att <- listAttributes(dog)
 human.attributes <- listAttributes(human)
@@ -47,6 +49,7 @@ mesenchymalMarkers.transcripts.tab <- getBM(attributes = c("ensembl_gene_id",
                                                            "end_position",
                                                            "transcript_start",
                                                            "hgnc_symbol",
+                                                           "external_transcript_name",
                                                            "strand"),
                                             filters = "ensembl_gene_id",
                                             values = mesenchymalMarkers, dog)
@@ -54,12 +57,13 @@ mesenchymalMarkers.transcripts.tab <- getBM(attributes = c("ensembl_gene_id",
 mesenchymalMarkers.transcripts.tab$marker <- "mesenchymal"
 
 mesenchymalMarkers.genes.tab <- getBM(attributes = c("ensembl_gene_id",
-                                                           "entrezgene",
-                                                           "chromosome_name",
-                                                           "start_position",
-                                                           "end_position",
-                                                           "hgnc_symbol",
-                                                           "strand"),
+                                                     "entrezgene",
+                                                     "chromosome_name",
+                                                     "start_position",
+                                                     "end_position",
+                                                     "hgnc_symbol",
+                                                     "description",
+                                                     "strand"),
                                             filters = "ensembl_gene_id",
                                             values = mesenchymalMarkers, dog)
 mesenchymalMarkers.genes.tab$marker <- "mesenchymal"
@@ -80,13 +84,13 @@ gr.mesenchymalMarkers <- GRanges(seqnames = mesenchymalMarkers.transcripts.tab$c
                                 IRanges(mesenchymalMarkers.transcripts.tab$start_position, 
                                         mesenchymalMarkers.transcripts.tab$end_position), 
                                 strand = c("-", "+")[match(mesenchymalMarkers.transcripts.tab$strand, c("-1", "1"))],
-                                mesenchymalMarkers.transcripts.tab[,c("ensembl_gene_id", "ensembl_transcript_id", "hgnc_symbol", "transcript_start", "marker")])
+                                mesenchymalMarkers.transcripts.tab[,c("ensembl_gene_id", "ensembl_transcript_id", "hgnc_symbol", "transcript_start", "external_transcript_name", "marker")])
 
 gr.mesenchymalMarkers.genes <-  GRanges(seqnames = mesenchymalMarkers.genes.tab$chromosome_name, 
                                         IRanges(mesenchymalMarkers.genes.tab$start_position, 
                                                 mesenchymalMarkers.genes.tab$end_position), 
                                         strand = c("-", "+")[match(mesenchymalMarkers.genes.tab$strand, c("-1", "1"))],
-                                        mesenchymalMarkers.genes.tab[,c("ensembl_gene_id", "entrezgene", "hgnc_symbol", "marker")])
+                                        mesenchymalMarkers.genes.tab[,c("ensembl_gene_id", "entrezgene", "hgnc_symbol", "description", "marker")])
 #---------------Epithelial Markers---------------------------------------------------
 epithelialMarkers <- c("CDH1" = "ENSCAFG00000020305",
                        "SPP1" = "ENSCAFG00000009569",
@@ -206,7 +210,7 @@ names(counts.h2az) <- files.h2az
 scale.input <- lapply(counts.input, function(x) {1000000/x$records})
 scale.h2az <- lapply(counts.h2az, function(x) {1000000/x$records})
 
-# import reads in the 25kb+/- TSS areas
+# import reads
 # Input
 reads.input <- lapply(files.input, function(x){
   fn <- paste(path.input, x, suffix, sep = "")
