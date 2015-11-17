@@ -50,7 +50,13 @@ gr.ap1Sites <- reduce(gr.ap1Sites)
 # extend CDS by 10kb
 aT.ap1Sites <- AnnotationTrack(subsetByOverlaps(gr.ap1Sites, gr.which), name = "AP1", col = "blue")
 
-displayPars(aT.ap1Sites) <- list("fontcolor.title" = "black", "background.title" = "white", "col.axis" = "black", "col.frame" = "white")
+displayPars(aT.ap1Sites) <- list("fontcolor.title" = "black", 
+                                 "background.title" = "white", 
+                                 "col.axis" = "black", 
+                                 "col.frame" = "white",
+                                 cex.title = 0.7,
+                                 rotation.title = 0)
+  
 
 #----------searching for NFKB sites-----------------------------------
 # NFKB1 (4 specie consensus) - MA0105.1
@@ -80,7 +86,12 @@ gr.nfkbSites <- sort(gr.nfkbSites)
 gr.nfkbSites <- reduce(gr.nfkbSites)
 aT.nfkbSites <- AnnotationTrack(subsetByOverlaps(gr.nfkbSites, gr.which), name = "NFKB", col = "salmon")
 
-displayPars(aT.nfkbSites) <- list("fontcolor.title" = "black", "background.title" = "white", "col.axis" = "black", "col.frame" = "white")
+displayPars(aT.nfkbSites) <- list("fontcolor.title" = "black", 
+                                  "background.title" = "white", 
+                                  "col.axis" = "black", 
+                                  "col.frame" = "white",
+                                  cex.title = 0.7,
+                                  rotation.title = 0)
 
 #----------visualisation depends on visualization.R having run!---------
 source("~/Development/JCSMR_Genomics/R/TremethickLab/H2AZ_EMT/visualization.R")

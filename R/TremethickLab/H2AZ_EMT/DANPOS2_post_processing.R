@@ -300,3 +300,21 @@ df3 <- as(mcols(gr3)[,c("control_smt_val", "treat_smt_val")], "data.frame")
 pdf("Heatmap_H2AZ_nucleosome_500TSS0_qPCR_genes_FDR0.01.pdf", height = 10, width = 10)
 heatmap2 <- heatmap.3(as.matrix(log2(df3 + 1)), trace = "none", cexCol = 0.6, main = "qPCR genes\nH2A.Z containing nucleosomes,\nsummit value [log2], FDR <= 0.01", hclustfun=function(x) hclust(x,method="ward.D"))
 dev.off()
+
+#---------------plotting coverage maps based on DANPOS2 normalized data------------
+gr.TGFb <- subsetByOverlaps(gr.TGFb_H2AZ_ChIP_bgsub_Fnor, gr.which)
+gr.WT <- subsetByOverlaps(gr.WT_H2AZ_ChIP_bgsub_Fnor, gr.which)
+
+dT.TGFb <- DataTrack(subsetByOverlaps(gr.TGFb_H2AZ_ChIP_bgsub_Fnor, gr.which), type = "histogram")
+dT.WT <- DataTrack(subsetByOverlaps(gr.WT_H2AZ_ChIP_bgsub_Fnor, gr.which), type = "histogram")
+i <- 2
+biomTrack <- BiomartGeneRegionTrack(genome = "canFam3", 
+                                    chromosome = as(seqnames(gr.mesenchymalMarkers), "character")[i],
+                                    start = as.integer(start(gr.mesenchymalMarkers[i]), "integer"),
+                                    end = as.integer(end(gr.mesenchymalMarkers[i]), "integer"),
+                                    name = paste(mcols(gr.mesenchymalMarkers[i])$hgnc_symbol, "transcript",  mcols(gr.mesenchymalMarkers[i])$ensembl_transcript_id, sep = " "),
+                                    mart = dog)
+
+aT1 <- AnnotationTrack(gr.mesenchymalMarkers[i])
+
+plotTracks(list(aT1, dT.WT, dT.TGFb))
