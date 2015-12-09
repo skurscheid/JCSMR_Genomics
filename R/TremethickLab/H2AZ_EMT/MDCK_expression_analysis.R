@@ -46,6 +46,8 @@ gr.gpl17403 <- GRanges(gpl17403.annotation.genomic$seqname,
                        strand = gpl17403.annotation.genomic$strand, 
                        gpl17403.annotation.genomic[, c("probeset_id", "gene_assignment", "mrna_assignment", "category")])
 seqlevels(gr.gpl17403, force = T) <- gsub("chr", "", seqlevels(gr.gpl17403))
+gr.gpl17403$gene_assignment <- as(gr.gpl17403$gene_assignment, "character")
+gr.gpl17403$mrna_assignment <- as(gr.gpl17403$mrna_assignment, "character")
 
 #
 toMatch <- mcols(gr.MSigDB.EMT_associated.cfam)$hgnc_symbol

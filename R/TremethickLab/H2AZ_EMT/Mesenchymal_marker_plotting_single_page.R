@@ -1,10 +1,11 @@
 setwd("~/Data/Tremethick/EMT/GenomeWide/danpos_analysis/")
-load("aT.nfkbSites.rda")
+load("aT.nfkbSites.gr")
 load("aT.ap1sites.rda")
-load()
+load("~/Data/Tremethick/EMT/GenomeWide/danpos_analysis/biomTrack.Cfam3.Ensembl.rda")
+load("~/Data/Tremethick/EMT/GenomeWide/danpos_analysis/aT.TSS.rda")
+load("/Users/u1001407/Data/Tremethick/EMT/genomeWide.50kbTSS.DataTracks.rda")
 
-# Plotting of all epithelial markers on single page
-
+# Plotting of all mesenchymal markers on single page
 displayPars(biomTrack) <- list(stacking = "dense")
 
 plot.rows <- 5

@@ -54,9 +54,8 @@ displayPars(aT.ap1Sites) <- list("fontcolor.title" = "black",
                                  "background.title" = "white", 
                                  "col.axis" = "black", 
                                  "col.frame" = "white",
-                                 cex.title = 0.7,
+                                 cex.title = 0.5,
                                  rotation.title = 0)
-  
 
 #----------searching for NFKB sites-----------------------------------
 # NFKB1 (4 specie consensus) - MA0105.1
@@ -90,64 +89,11 @@ displayPars(aT.nfkbSites) <- list("fontcolor.title" = "black",
                                   "background.title" = "white", 
                                   "col.axis" = "black", 
                                   "col.frame" = "white",
-                                  cex.title = 0.7,
+                                  cex.title = 0.5,
                                   rotation.title = 0)
 
-#----------visualisation depends on visualization.R having run!---------
-source("~/Development/JCSMR_Genomics/R/TremethickLab/H2AZ_EMT/visualization.R")
-ncols <- 1
-nrows <- 2
-grid.newpage()
-pushViewport(viewport(layout = grid.layout(nrows, ncols)))
+save(aT.ap1Sites, file = "~/Data/Tremethick/EMT/GenomeWide/danpos_analysis/aT.ap1Sites.rda")
+save(aT.nfkbSites, file = "~/Data/Tremethick/EMT/GenomeWide/danpos_analysis/aT.nfkbSites.rda")
 
-biomTrack <- BiomartGeneRegionTrack(genome = "canFam3", chromosome = as(cdsTab[i, "chromosome_name"], "integer"), start = as.integer(cdsTab[i, "promoter_start_position"]), end = as.integer(cdsTab[i, "promoter_end_position"]), name = paste(cdsTab[i, "hgnc_symbol"], sep = ""), mart = dog)
-displayPars(biomTrack) <- list(showFeatureId = TRUE, showId = TRUE, "fontcolor.title" = "black", "background.title" = "white", "col.axis" = "black", "col.frame" = "white")
 
-axisTrack <- GenomeAxisTrack()
 
-# pushViewport(viewport(layout.pos.col = ncols, layout.pos.row = 1))
-# plotTracks(main = paste("Coverage ", as(cdsTab[i,"marker"], "character"), " ", as(cdsTab[i,"hgnc_symbol"], "character"), " CDS", sep = ""), cex.main = 0.5,
-#            list(axisTrack, 
-#                 biomTrack,
-#                 aT.primers,
-#                 aT.nfkbSites,
-#                 aT.ap1Sites,
-#                 aT.captureProbes,
-#                 dT.cov.input.wt.cds,
-#                 dT.cov.h2az.wt.cds,
-#                 dT.cov.input.tgfb.cds,
-#                 dT.cov.h2az.tgfb.cds
-#            ), 
-#            chromosome = cdsTab[i, "chromosome_name"], 
-#            from = as(cdsTab[i, "start_position"], "integer"), 
-#            to = as(cdsTab[i, "end_position"], "integer"), 
-#            extend.left = 2500, 
-#            extend.right = 2500,
-#            add = TRUE, 
-#            littleTicks = TRUE, 
-#            scale = 0.5)
-# popViewport(1)
-# pushViewport(viewport(layout.pos.col = ncols, layout.pos.row = 2))
-# plotTracks(main = paste("Coverage ", as(cdsTab[i,"marker"], "character"), " ", as(cdsTab[i,"hgnc_symbol"], "character"), " TSS1500", sep = ""), cex.main = 0.5,
-#            list(axisTrack, 
-#                 biomTrack,
-#                 aT.primers,
-#                 aT.nfkbSites,
-#                 aT.ap1Sites,
-#                 dT.cov.input.wt.tss.cds,
-#                 dT.cov.h2az.wt.tss.cds,
-#                 dT.cov.input.tgfb.tss.cds,
-#                 dT.cov.h2az.tgfb.tss.cds
-#            ), 
-#            chromosome = cdsTab[i, "chromosome_name"], 
-#            from = as(cdsTab[i, "promoter_start_position"], "integer"), 
-#            to = as(cdsTab[i, "promoter_end_position"], "integer"), 
-#            extend.left = 2500, 
-#            extend.right = 2500,
-#            add = TRUE, 
-#            littleTicks = TRUE, 
-#            scale = 0.5)
-# popViewport(1)
-# 
-# 
-# dev.off()

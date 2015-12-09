@@ -215,7 +215,7 @@ reactome.danpos2.anno_treat_enriched.pathLevel$FDR <- p.adjust(reactome.danpos2.
 
 #------------MSigDB analysis------------------
 seqlevels(danpos2.anno) <- gsub("chr", "", seqlevels(danpos2.anno))
-gr1 <- subsetByOverlaps(danpos2.anno, promoters(gr.MSigDB.EMT_associated.cfam, upstream = 250, downstream = 0))
+gr1 <- subsetByOverlaps(danpos2.anno, promoters(gr.MSigDB.EMT_associated.cfam, upstream = 500, downstream = 0))
 gr1 <- gr1[which(mcols(gr1)$smt_diff_FDR <= 0.01)]
 gr1.ctrl <- gr1[which(mcols(gr1)$smt_log2FC < 0)]
 gr1.treat <- gr1[which(mcols(gr1)$smt_log2FC > 0)]
@@ -318,3 +318,10 @@ biomTrack <- BiomartGeneRegionTrack(genome = "canFam3",
 aT1 <- AnnotationTrack(gr.mesenchymalMarkers[i])
 
 plotTracks(list(aT1, dT.WT, dT.TGFb))
+
+
+#-----------extracting regions of EMT-associated genes (FDR <= 0.01), treatment > control------------
+gr1 <- subsetByOverlaps(danpos2.anno, promoters(gr.MSigDB.EMT_associated.cfam, upstream = 500, downstream = 0))
+gr1[which(gr1$treat_smt_val > 5 & gr1$control_smt_val <= 1)]
+
+

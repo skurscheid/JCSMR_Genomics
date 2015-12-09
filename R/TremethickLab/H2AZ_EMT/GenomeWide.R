@@ -13,6 +13,7 @@ setwd('~/Data/Tremethick/EMT/')
 
 source("~/Development/GeneralPurpose/R/binnedAverage.R")
 source("~/Development/GeneralPurpose/R/binnedSum.R")
+source("~/Development/JCSMR_Genomics/R/TremethickLab/H2AZ_EMT/calculateCoverage.R")
 
 # define Ensembl IDs prior to lookup at Biomart:
 # # EMT markers
@@ -41,13 +42,14 @@ human.attributes <- listAttributes(human)
 #---------------Mesenchymal Markers---------------------------------------------------
 mesenchymalMarkers<- c("FN1" = "ENSCAFG00000014345", 
                        "ZEB1" = "ENSCAFG00000004023", 
-                       "TGFb1" = "ENSCAFG00000005014", 
+                       "TGFb1" = "ENSCAFG00000005014",
+                       "TGFb3" = "ENSCAFG00000017101",
                        "SPARC" = "ENSCAFG00000017855", 
-                       "TWIST2" = "ENSCAFG00000012469")
+                       "TWIST2" = "ENSCAFG00000012469"
+                       )
 
 mesenchymalMarkers.transcripts.tab <- getBM(attributes = c("ensembl_gene_id",
                                                            "ensembl_transcript_id",
-                                                           "entrezgene",
                                                            "chromosome_name",
                                                            "start_position",
                                                            "end_position",
@@ -95,7 +97,7 @@ gr.mesenchymalMarkers <- GRanges(seqnames = mesenchymalMarkers.transcripts.tab$c
                                                                       "external_transcript_name", 
                                                                       "marker")])
 
-gr.mesenchymalMarkers$hgnc_symbol[3:8] <- paste(gr.mesenchymalMarkers$hgnc_symbol[3:8], "(TGFB-1)", sep = " ")
+gr.mesenchymalMarkers$hgnc_symbol[3:5] <- paste(gr.mesenchymalMarkers$hgnc_symbol[3:5], "(TGFB-1)", sep = " ")
 
 gr.mesenchymalMarkers.genes <-  GRanges(seqnames = mesenchymalMarkers.genes.tab$chromosome_name, 
                                         IRanges(mesenchymalMarkers.genes.tab$start_position, 
@@ -173,18 +175,19 @@ gr.epithelialMarkers.genes <-  GRanges(seqnames = epithelialMarkers.genes.tab$ch
                                                                        "hgnc_symbol", 
                                                                        "marker")])
 
-#--------------add TGFb-------------------------------------------------------
-TGFb.Hsap <- "ENSG00000105329"
-TGFb.Hsap <- getBM(attributes = c("ensembl_gene_id",
-                                  "entrezgene",
-                                  "hgnc_symbol"),
-                   filters = "ensembl_gene_id",
-                   values = TGFb.Hsap, human)
 
-getBM(attributes = c("ensembl_gene_id",
-                     "cfamiliaris_homolog_ensembl_gene"),
-      filters = "ensembl_gene_id",
-      values = TGFb.Hsap$ensembl_gene_id, human)
+#--------------add TGFb-------------------------------------------------------
+# TGFb.Hsap <- "ENSG00000105329"
+# TGFb.Hsap <- getBM(attributes = c("ensembl_gene_id",
+#                                   "entrezgene",
+#                                   "hgnc_symbol"),
+#                    filters = "ensembl_gene_id",
+#                    values = TGFb.Hsap, human)
+# 
+# getBM(attributes = c("ensembl_gene_id",
+#                      "cfamiliaris_homolog_ensembl_gene"),
+#       filters = "ensembl_gene_id",
+#       values = TGFb.Hsap$ensembl_gene_id, human)
 
 #-------------put together GRanges object for reading BAM files---------------
 gr.which <- c(promoters(reduce(gr.mesenchymalMarkers), upstream = 400000, downstream = 400000),
@@ -209,9 +212,9 @@ seqlevels(gr.which) <- gsub("chr", "", seqlevels(gr.which))
 # on GDU cluster
 #path = "/Volumes/MHS/researchdata/JCSMR/TremethickLab/Illumina_Sequencing/MDCK_ChIPSeq/"
 
-path.input = "/Volumes/gduserv/Data/Tremethick/EMT/GenomeWide/Input/processed_data/duplicates_marked/"
+#path.input = "/Volumes/gduserv/Data/Tremethick/EMT/GenomeWide/Input/processed_data/duplicates_marked/"
 path.input = "~/Data/Tremethick/EMT/GenomeWide/Input/processed_data/duplicates_marked/"
-path.h2az = "/Volumes/gduserv/Data/Tremethick/EMT/GenomeWide/H2AZ/processed_data/duplicates_marked/"
+#path.h2az = "/Volumes/gduserv/Data/Tremethick/EMT/GenomeWide/H2AZ/processed_data/duplicates_marked/"
 path.h2az = "~/Data/Tremethick/EMT/GenomeWide/H2AZ/processed_data/duplicates_marked/"
 
 suffix = ".Q10.sorted.MkDup.bam"
@@ -222,7 +225,7 @@ files.h2az = c("H2AZ_TGFb_rep1_S3", "H2AZ_TGFb_rep2_S4", "H2AZ_WT_rep1_S1", "H2A
 #files.h2az <- c("H2AZ_TGFb", "H2AZ_WT")
 
 # parameters for reading in BAM files
-flag <- scanBamFlag(isProperPair = T, isPaired = T, isDuplicate = F, isSecondaryAlignment = F)#, isFirstMateRead = T, isSecondMateRead = F)
+# flag <- scanBamFlag(isProperPair = T, isPaired = T, isDuplicate = F, isSecondaryAlignment = F)#, isFirstMateRead = T, isSecondMateRead = F)
 flag <- scanBamFlag(isProperPair = T, isDuplicate = F)
 SBParam.all <- ScanBamParam(flag = flag, simpleCigar = T, what = c("rname", "strand", "pos", "qwidth")) #
 SBParam <- ScanBamParam(flag = flag, simpleCigar = T, what = c("rname", "strand", "pos", "qwidth")) #, which = gr.which)
@@ -283,41 +286,26 @@ cov.h2az.emt_markers.wt <- (coverage.h2az[["H2AZ_WT_rep1_S1"]] + coverage.h2az[[
 cov.h2az.emt_markers.tgfb <- (coverage.h2az[["H2AZ_TGFb_rep1_S3"]] + coverage.h2az[["H2AZ_TGFb_rep2_S4"]]) / 2
 
 #----------preparing data for plotting of sequencing coverage--------------
-# creating single-bp level windows for visualization
-gr.which.tiles <- tile(gr.which, width = 1) # width = bin size
-gr.which.tiles <- unlist(gr.which.tiles)
-seqlevels(gr.which.tiles, force = T) <- seqlevels(gr.which.tiles)[order(seqlevels(gr.which.tiles))]
-
-cov.input.emt_markers.wt <- cov.input.emt_markers.wt[which(names(cov.input.emt_markers.wt) %in% seqlevels(gr.which.tiles))]
-cov.input.emt_markers.wt <- cov.input.emt_markers.wt[names(cov.input.emt_markers.wt)[order(names(cov.input.emt_markers.wt))]]
-
-cov.input.emt_markers.tgfb <- cov.input.emt_markers.tgfb[which(names(cov.input.emt_markers.tgfb) %in% seqlevels(gr.which.tiles))]
-cov.input.emt_markers.tgfb <- cov.input.emt_markers.tgfb[names(cov.input.emt_markers.tgfb)[order(names(cov.input.emt_markers.tgfb))]]
-
-cov.h2az.emt_markers.wt <- cov.h2az.emt_markers.wt[which(names(cov.h2az.emt_markers.wt) %in% seqlevels(gr.which.tiles))]
-cov.h2az.emt_markers.wt <- cov.h2az.emt_markers.wt[names(cov.h2az.emt_markers.wt)[order(names(cov.h2az.emt_markers.wt))]]
-
-cov.h2az.emt_markers.tgfb <- cov.h2az.emt_markers.tgfb[which(names(cov.h2az.emt_markers.tgfb) %in% seqlevels(gr.which.tiles))]
-cov.h2az.emt_markers.tgfb <- cov.h2az.emt_markers.tgfb[names(cov.h2az.emt_markers.tgfb)[order(names(cov.h2az.emt_markers.tgfb))]]
-
 # calculate binned averages from the 1bp-resolution coverage objects
-bA.cov.input.emt_markers.wt <- binnedAverage(gr.which.tiles, cov.input.emt_markers.wt, "mean")
-bA.cov.input.emt_markers.tgfb <- binnedAverage(gr.which.tiles, cov.input.emt_markers.tgfb, "mean")
-bA.cov.h2az.emt_markers.wt <- binnedAverage(gr.which.tiles, cov.h2az.emt_markers.wt, "mean")
-bA.cov.h2az.emt_markers.tgfb <- binnedAverage(gr.which.tiles, cov.h2az.emt_markers.tgfb, "mean")
+bA.cov.input.emt_markers.wt <- calculateCoverage(step = 1, gr.which, cov.input.emt_markers.wt, func = "mean")
+bA.cov.input.emt_markers.tgfb <- calculateCoverage(step = 1, gr.which, cov.input.emt_markers.tgfb, func = "mean")
+bA.cov.h2az.emt_markers.wt <- calculateCoverage(step = 1, gr.which, cov.h2az.emt_markers.wt, func = "mean")
+bA.cov.h2az.emt_markers.tgfb <- calculateCoverage(step = 1, gr.which, cov.h2az.emt_markers.tgfb, func = "mean")
 
 #----------creating DataTrack objects for visualization using Gviz------------------------------
-dT.cov.input.emt_markers.wt <- DataTrack(bA.cov.input.emt_markers.wt, type = "h", col = "darkgreen", name = "Input WT [rpm]", strand = "*", transform = )
-dT.cov.input.emt_markers.tgfb <- DataTrack(bA.cov.input.emt_markers.tgfb, type = "h", col = "lightgreen", name = "Input TGFb [rpm]", strand = "*")
-dT.cov.h2az.emt_markers.wt <- DataTrack(bA.cov.h2az.emt_markers.wt, type = "h", col = "darkred", name = "H2AZ WT [rpm]", strand = "*")
-dT.cov.h2az.emt_markers.tgfb <- DataTrack(bA.cov.h2az.emt_markers.tgfb, type = "h", col = "red", name = "H2AZ TGFb [rpm]", strand = "*")
+dT.cov.input.emt_markers.wt <- DataTrack(bA.cov.input.emt_markers.wt, type = "h", col = "darkgreen", name = "Input WT\n[rpm]", strand = "*")
+dT.cov.input.emt_markers.tgfb <- DataTrack(bA.cov.input.emt_markers.tgfb, type = "h", col = "lightgreen", name = "Input TGFb\n[rpm]", strand = "*")
+dT.cov.h2az.emt_markers.wt <- DataTrack(bA.cov.h2az.emt_markers.wt, type = "h", col = "darkred", name = "H2AZ WT\n[rpm]", strand = "*")
+dT.cov.h2az.emt_markers.tgfb <- DataTrack(bA.cov.h2az.emt_markers.tgfb, type = "h", col = "red", name = "H2AZ TGFb\n[rpm]", strand = "*")
 
-displayPars(dT.cov.input.emt_markers.wt) <- list("fontcolor.title" = "black", "background.title" = "white", "col.axis" = "black", "col.frame" = "white", "cex.title" = 0.7)
-displayPars(dT.cov.input.emt_markers.tgfb) <- list("fontcolor.title" = "black", "background.title" = "white", "col.axis" = "black", "col.frame" = "white", "cex.title" = 0.7)
-displayPars(dT.cov.h2az.emt_markers.wt) <- list("fontcolor.title" = "black", "background.title" = "white", "col.axis" = "black", "col.frame" = "white", "cex.title" = 0.7)
-displayPars(dT.cov.h2az.emt_markers.tgfb) <- list("fontcolor.title" = "black", "background.title" = "white", "col.axis" = "black", "col.frame" = "white", "cex.title" = 0.7)
+dpList <- list("fontcolor.title" = "black", "background.title" = "white", "col.axis" = "black", "col.frame" = "white", "cex.title" = 0.4, rotation.title = 270, cex.axis = 0.6)
 
-# save(file = "genomeWide.50kbTSS.DataTracks.rda", list = c("dT.cov.input.emt_markers.wt", "dT.cov.input.emt_markers.tgfb", "dT.cov.h2az.emt_markers.wt", "dT.cov.h2az.emt_markers.tgfb"))
+displayPars(dT.cov.input.emt_markers.wt) <- dpList
+displayPars(dT.cov.input.emt_markers.tgfb) <- dpList
+displayPars(dT.cov.h2az.emt_markers.wt) <- dpList
+displayPars(dT.cov.h2az.emt_markers.tgfb) <- dpList
+
+save(file = "genomeWide.50kbTSS.DataTracks.rda", list = c("dT.cov.input.emt_markers.wt", "dT.cov.input.emt_markers.tgfb", "dT.cov.h2az.emt_markers.wt", "dT.cov.h2az.emt_markers.tgfb"))
 
 #-----------plotting coverage across epithelial markers------------------------------------------
 
@@ -328,9 +316,9 @@ dT.Diff <- DataTrack("~/Data/Tremethick/EMT/GenomeWide/danpos_analysis/TGFb_vs_W
 gr.plot <- promoters(gr.mesenchymalMarkers, up = 1500, down = 20000)
 gr.plot <- promoters(gr.epithelialMarkers.genes, upstream = 20000, downstream = 20000)
 
-
-
-biomTrack <- GeneRegionTrack(TxDb.Cfam3.Ensembl, showId = T, geneSymbol = T, showExonId = F)
+biomTrack <- GeneRegionTrack(TxDb.Cfam3.Ensembl, showId = T, geneSymbol = T, showExonId = F, name = "", stacking = "hide")
+displayPars(biomTrack) <- list("fontcolor.title" = "black", "background.title" = "white", "col.axis" = "black", "col.frame" = "white")
+save(biomTrack, file = "biomTrack.Cfam3.Ensembl.rda")
 
 pdf("~/OneDrive/Documents/ANU/Tremethick Lab/Lab Meetings/Lab Meeting 2015-10-14/MDCK_ChIP-Seq_EpitheliaMarkers_coverage_plots_1500TSS1500_incl_DMRs_incl_SureSelect.pdf")
 for (i in 1:length(gr.plot)){
