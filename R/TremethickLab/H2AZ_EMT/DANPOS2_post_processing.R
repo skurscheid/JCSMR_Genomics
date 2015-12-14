@@ -19,7 +19,10 @@ TxDb.Cfam3.Ensembl <- makeTxDbFromGFF("/Volumes/gduserv/Data/Annotations/CanFam3
 Cfam3.genes <- genes(TxDb.Cfam3.Ensembl)
 
 #------------load DANPOS2 results-----------------------
-danpos2.results <- read.table("~/Data/Tremethick/EMT/GenomeWide/danpos_analysis/TGFb_vs_WT/Users_u1001407_Data_Tremethick_EMT_GenomeWide_Conditions_TGFb_ChIP-Users_u1001407_Data_Tremethick_EMT_GenomeWide_Conditions_WT_ChIP.positions.integrative.xls",
+# changed 2015-12-14:
+# now using the results from DANPOS2 analysis with default settings
+# previous run seemed to create too large sliding windows, i.e. twice nucleosome size
+danpos2.results <- read.table("~/Data/Tremethick/EMT/GenomeWide/danpos_analysis/TGFb_vs_WT_147bp/result/TGFb_H2AZ-WT_H2AZ.positions.integrative.xls",
                               header = T, 
                               as.is = T,
                               sep = "\t")
