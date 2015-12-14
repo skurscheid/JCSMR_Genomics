@@ -21,6 +21,7 @@ Cfam3.genes <- genes(TxDb.Cfam3.Ensembl)
 #------------load DANPOS2 results-----------------------
 # changed 2015-12-14:
 # now using the results from DANPOS2 analysis with default settings
+# (~/Development/JCSMR-Tremethick-Lab/shell_scripts/danpos2_command_lines.sh)
 # previous run seemed to create too large sliding windows, i.e. twice nucleosome size
 danpos2.results <- read.table("~/Data/Tremethick/EMT/GenomeWide/danpos_analysis/TGFb_vs_WT_147bp/result/TGFb_H2AZ-WT_H2AZ.positions.integrative.xls",
                               header = T, 
