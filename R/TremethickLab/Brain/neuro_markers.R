@@ -40,7 +40,14 @@ hsap.attribs <- listAttributes(human)
 
 
 #---------scrape Wikipedia entry for neuronal marker names--------------------------
-html1 <- readHTMLTable("http://en.wikipedia.org/wiki/Neuronal_lineage_marker#Neural_stem_cells_markers", header = T, trim = T, as.is = T)
+# original URL
+# u <- "https://en.wikipedia.org/wiki/Neuronal_lineage_marker#Neural_stem_cells_markers"
+u = "https://en.wikipedia.org/wiki/List_of_countries_and_dependencies_by_population"
+html1 <- readHTMLTable(u, 
+                       header = T, 
+                       trim = T, 
+                       as.is = T,
+                       as.data.frame = T)
 neuro.markers <- data.frame(html1[[2]])
 neuro.markers[,1] <- as.character(neuro.markers[,1])
 neuro.markers[,2] <- as.character(neuro.markers[,2])
@@ -232,7 +239,7 @@ Input.mean <- apply(Input, 2, mean)
 
 # Input coverage for all 
 l1 <- lapply(cov.which[["Input_sonicated"]], function(x) if (length(x) > 1) {
-  lapply(x, function(y) data.frame(as.integer(y) / libSizes["Input_MNase"] * 1000000))
+  lapply(x, function(y) data.frame(as.integer(y) / libSizes["Input_sonicated"] * 1000000))
 })
 s1 <- unlist(lapply(l1, function(x) !is.null(x)))
 df1 <- data.frame(l1[s1])
@@ -420,7 +427,7 @@ plot(c(-500:499), l1[["h2alap.low.mean"]] / l1[["Input.sonicated.mean"]],
                     max(l1[["h2alap.high.mean"]] / l1[["Input.sonicated.mean"]])))),
      main = "H2A.Lap1 at +/-500bp of TSS",
      bty = "l")
-legend("bottomrigh", c("Transcripts, high", "Transcripts, low"), col = c("green", "red"), lty = 1, lwd = 3, bty = "n", cex = 0.8)
+legend("bottomright", c("Transcripts, high", "Transcripts, low"), col = c("green", "red"), lty = 1, lwd = 3, bty = "n", cex = 0.8)
 lines(lowess(l1[["h2alap.low.mean"]] / l1[["Input.sonicated.mean"]] ~ c(-500:499), f = 0.1),col="red", lwd = 4)
 lines(lowess(l1[["h2alap.high.mean"]] / l1[["Input.sonicated.mean"]] ~ c(-500:499), f = 0.1),col="green", lwd = 4)
 abline(v = 1, lwd = 4, lty = 2, col = "darkgrey")

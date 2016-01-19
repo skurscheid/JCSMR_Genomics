@@ -47,9 +47,7 @@ save(human, file = "/Volumes/gduserv/Data/Annotations/hsapiens_gene_ensembl_GRCh
 saveDb(hsapEnsembl, file = "/Volumes/gduserv/Data/Annotations/hsapiens_gene_ensembl_GRCh38_TxDB.sqlite")
 # save(chromInfo, file = "/home/skurscheid/Data/Annotations/hsapiens_gene_ensembl_chromInfo_GRCh37.rda")
 
-#------------------------------------------------------------------------------
-# Prepare GRanges objects for the different genomic regions of interest
-#------------------------------------------------------------------------------
+#----------------  Prepare GRanges objects for the different genomic regions of interest --------------------------------------------------------------
 gr.tx <- transcripts(hsapEnsembl)
 
 # extract 5' UTRs
