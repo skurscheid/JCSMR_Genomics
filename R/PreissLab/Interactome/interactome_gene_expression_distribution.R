@@ -8,7 +8,6 @@ library(Biostrings)
 mouse <- useMart("ensembl", dataset = "mmusculus_gene_ensembl")
 mmus.attribs <- listAttributes(mouse)
 
-
 setwd("~/Data/Preiss/Interactome/Protein Abundance/")
 
 # Comparing protein abundances between WCL and Interactom/RBDmap data
@@ -37,30 +36,6 @@ IllumIDs <- unique(c(wcl.IllumIDs$illumina_mouseref_8_v2, interactome.IllumIDs$i
 # https://www.evernote.com/shard/s128/nl/2147483647/9989a775-18f7-4f3c-bab4-8105feff51b9/
 library(GEOquery)
 
-# four normal HL-1 samples
-gse45207 <- getGEO("GSE45207", GSEMatrix = TRUE)
-gse45207.hl1_normal <- rownames(pData(gse45207[[1]])[grep("cardiomyocte untreated", pData(gse45207[[1]])[, "source_name_ch1"]),])
-# get data from GEO
-gse45207.hl1_normal.data <- sapply(gse45207.hl1_normal, getGEO)
-# get actuall expression data from the GEOData object
-gse45207.hl1_normal.data <- lapply(gse45207.hl1_normal.data, function(x) Table(x))
-# collapse the list into a data.frame
-gse45207.hl1_normal.data <- do.call("cbind", gse45207.hl1_normal.data)
-rownames(gse45207.hl1_normal.data) <- gse45207.hl1_normal.data$GSM1099128.ID_REF
-gse45207.hl1_normal.data <- gse45207.hl1_normal.data[IllumIDs,]
-
-x <- as(unlist(gse45207.hl1_normal.data[wcl.IllumIDs$illumina_mouseref_8_v2, grep("VALUE", colnames(gse45207.hl1_normal.data))]), "numeric")
-h <- density(x, kernel="gaussian")$bw # $
-w <- 1 / pnorm(0, mean=x, sd=h, lower.tail=FALSE)
-gse45207.hl1_normal.data.density.wcl <- density(x, bw=h, kernel="gaussian", weights=w / length(x))
-gse45207.hl1_normal.data.density.wcl$y[gse45207.hl1_normal.data.density.wcl$x < 20] <- 0
-
-x <- as(unlist(gse45207.hl1_normal.data[interactome.IllumIDs$illumina_mouseref_8_v2, grep("VALUE", colnames(gse45207.hl1_normal.data))]), "numeric")
-h <- density(x, kernel="gaussian")$bw # $
-w <- 1 / pnorm(0, mean=x, sd=h, lower.tail=FALSE)
-gse45207.hl1_normal.data.density.interactome <- density(x, bw=h, kernel="gaussian", weights=w / length(x))
-gse45207.hl1_normal.data.density.interactome$y[gse45207.hl1_normal.data.density.interactome$x < 0] <- 0
-
 # GSE56584
 gse56584 <- getGEO("GSE56584", GSEMatrix = TRUE)
 gse56584.hl1_normal <- rownames(pData(gse56584[[1]])[grep("murine control serum", pData(gse56584[[1]])[, "source_name_ch1"]),])
@@ -71,6 +46,19 @@ gse56584.hl1_normal.data <- lapply(gse56584.hl1_normal.data, function(x) Table(x
 # collapse the list into a data.frame
 gse56584.hl1_normal.data <- do.call("cbind", gse56584.hl1_normal.data)
 rownames(gse56584.hl1_normal.data) <- gse56584.hl1_normal.data[,1]
+gse56584.hl1_normal.data <- data.matrix(gse56584.hl1_normal.data[, grep("VALUE", colnames(gse56584.hl1_normal.data))])
+
+# summarize probes at gene level
+illumina.ensemblIDs <- getBM(c("ensembl_gene_id", "illumina_mouseref_8_v2"), filters = "illumina_mouseref_8_v2", values = rownames(gse56584.hl1_normal.data), mart = mouse)
+ensIds <- unique(illumina.ensemblIDs$ensembl_gene_id)
+
+gse56584.hl1_normal.data.genes <- sapply(colnames(gse56584.hl1_normal.data), function(w){
+  sapply(ensIds, function(x){
+    i <- illumina.ensemblIDs[which(illumina.ensemblIDs$ensembl_gene_id %in% x), "illumina_mouseref_8_v2"]
+    j <- mean(gse56584.hl1_normal.data[i, w])
+  })
+})
+
 gse56584.hl1_normal.data <- gse56584.hl1_normal.data[IllumIDs,]
 gse56584.hl1_normal.data.density.wcl <- density(as(unlist(gse56584.hl1_normal.data[wcl.IllumIDs$illumina_mouseref_8_v2, grep("VALUE", colnames(gse56584.hl1_normal.data))]), "numeric"))
 gse56584.hl1_normal.data.density.interactome <- density(as(unlist(gse56584.hl1_normal.data[interactome.IllumIDs$illumina_mouseref_8_v2, grep("VALUE", colnames(gse56584.hl1_normal.data))]), "numeric"))
@@ -104,5 +92,9 @@ legend("topright", legend = c("WCL", "Interactome"),
        lwd = 5,
        bty = "n")
 dev.off()
+
+save(gse56584.hl1_normal.data.genes, file = "gse56584.hl1_normal.data.genes.rda")
+write.csv(gse56584.hl1_normal.data.genes, file = "gse56584.hl1_normal.data.genes.csv", col.names = T, row.names = T)
+
 
 

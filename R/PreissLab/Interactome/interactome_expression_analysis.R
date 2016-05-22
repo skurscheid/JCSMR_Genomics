@@ -29,8 +29,9 @@ mouse <- useMart("ensembl", dataset = "mmusculus_gene_ensembl")
 filters <- listFilters(mouse)
 attribs <- listAttributes(mouse)
 
-interactome <- read.xls("~/Dropbox/REM project-Sebastian/HL-1 interactome superset.xlsx", sheet = "Sheet1")
+interactome <- read.xls("~/Dropbox/REM project-Sebastian/HL-1 interactome superset.xlsx", sheet = "sheet 1")
 colnames(interactome)[c(1,2)] <- c("ensembl_gene_id", "gene_symbol")
+interactome$ensembl_gene_id <- as.character(interactome$ensembl_gene_id)
 
 # GEO expression data (previously downloaded)
 load("~/Data/Preiss/Interactome/gpl6246.rda")
@@ -45,8 +46,6 @@ interactome.add_id <- getBM(attributes = c("ensembl_gene_id", "ensembl_transcrip
                             mart = mouse)
 # remove NAs in Affy ID column
 interactome.add_id <- interactome.add_id[!is.na(interactome.add_id$affy_mogene_1_0_st_v1), ]
-
-
 
 # check which probes are available on the array
 i1 <- as.character(intersect(rownames(gse22292$GSE22292_series_matrix.txt.gz@assayData$exprs), unique(interactome.add_id$affy_mogene_1_0_st_v1)))
@@ -79,12 +78,10 @@ l2 <- lapply(l1, function(x) {
   print(i1)
   if(length(i1) == 1) {
     avg <- interactome.exprs[i1, ]
-  }
-  else if(length(i1) > 1) {
+  } else if(length(i1) > 1) {
     avg <- apply(interactome.exprs[i1, ], 2, mean)
-    }
   }
-  )
+})
 df1 <- t(data.frame(l2[lapply(l2, length)>0]))
 # and on sample level?
 interactome.exprs <- df1
